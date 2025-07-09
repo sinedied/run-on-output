@@ -77,7 +77,9 @@ function parseArguments() {
     }
 
     return {
-      patterns: values.patterns.split(',').map(p => new RegExp(p.trim(), 'i')),
+      patterns: values.patterns
+        .split(',')
+        .map((p) => new RegExp(p.trim(), 'i')),
       runCommand: values.run,
       message: values.message,
       command: positionals[0],
@@ -90,11 +92,11 @@ function parseArguments() {
   }
 }
 
-function executeCommand(command, args) {
+async function executeCommand(command, args) {
   return new Promise((resolve, reject) => {
     const parts = command.split(' ');
     const cmd = parts[0];
-    const cmdArgs = parts.slice(1).concat(args);
+    const cmdArgs = [parts.slice(1), ...args];
 
     const child = spawn(cmd, cmdArgs, {
       shell: true,
@@ -112,7 +114,7 @@ function executeCommand(command, args) {
   });
 }
 
-function main() {
+async function main() {
   const config = parseArguments();
 
   const foundPatterns = new Set();
@@ -123,7 +125,7 @@ function main() {
     shell: true
   });
 
-  function checkOutput(data) {
+  async function checkOutput(data) {
     const output = data.toString();
     process.stdout.write(output); // Forward output to console
 
@@ -145,16 +147,19 @@ function main() {
       }
 
       if (config.runCommand) {
-        executeCommand(config.runCommand, [])
-          .catch(error => console.error('[ERROR] Command failed:', error.message));
+        try {
+          await executeCommand(config.runCommand, []);
+        } catch (error) {
+          console.error('[ERROR] Command failed:', error.message);
+        }
       }
     }
   }
 
   child.stdout.on('data', checkOutput);
-  child.stderr.on('data', (data) => {
+  child.stderr.on('data', async (data) => {
     process.stderr.write(data); // Forward stderr to console
-    checkOutput(data); // Also check stderr for patterns
+    await checkOutput(data); // Also check stderr for patterns
   });
 
   child.on('error', (error) => {
@@ -162,7 +167,7 @@ function main() {
     process.exit(1);
   });
 
-  child.on('exit', (code, signal) => {
+  child.on('exit', (code, _signal) => {
     process.exit(code || 0);
   });
 
@@ -176,4 +181,9 @@ function main() {
   });
 }
 
-main();
+try {
+  await main();
+} catch (error) {
+  console.error('[ERROR] run-on-output failed:', error.message);
+  process.exit(1);
+}
