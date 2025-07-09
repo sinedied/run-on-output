@@ -1,0 +1,8 @@
+node_modules/
+logs
+*.log
+*.tgz
+npm-debug.log*
+.DS_Store
+Thumbs.db
+TODO
