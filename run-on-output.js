@@ -11,33 +11,35 @@ USAGE:
   run-on-output [OPTIONS] <command> [args...]
 
 DESCRIPTION:
-  Runs a command and monitors its output (stdout/stderr) for specified regex patterns.
+  Runs a command and monitors its output (stdout/stderr) for specified patterns.
   When all patterns are found, executes an action (run command or show message).
 
 OPTIONS:
   -p, --patterns <patterns>    Comma-separated list of regex patterns to watch for
+  -s, --strings <strings>      Comma-separated list of plain strings to watch for
   -r, --run <command>          Command to execute after all patterns are found
   -m, --message <text>         Message to display after all patterns are found
   -h, --help                   Show this help message
 
 NOTES:
+  - Either --patterns or --strings must be specified (but not both)
   - At least one of --run or --message must be specified
-  - Patterns are matched case-insensitively
+  - Patterns/strings are matched case-insensitively
   - Output is forwarded in real-time while monitoring
   - Both stdout and stderr are monitored for patterns
 
 EXAMPLES:
-  # Display message when services are ready
-  run-on-output -p "Server started,Database connected" -m "All services ready!" npm start
+  # Display message when services are ready (using plain strings)
+  run-on-output -s "Server started,Database connected" -m "All services ready!" npm start
 
-  # Execute command when server is listening
-  run-on-output -p "listening on port" -r "curl http://localhost:3000/health" node server.js
+  # Execute command when server is listening (using regex)
+  run-on-output -p "listening on port \\d+" -r "curl http://localhost:3000/health" node server.js
 
-  # Monitor development environment startup
-  run-on-output -p "webpack compiled,server ready" -m "Development environment ready" npm run dev
+  # Monitor development environment startup (using plain strings)
+  run-on-output -s "webpack compiled,server ready" -m "Development environment ready" npm run dev
 
   # Multiple actions
-  run-on-output -p "ready" -m "Server is up" -r "open http://localhost:3000" npm start`);
+  run-on-output -s "ready" -m "Server is up" -r "open http://localhost:3000" npm start`);
 }
 
 function parseArguments() {
@@ -46,6 +48,7 @@ function parseArguments() {
       args: process.argv.slice(2),
       options: {
         patterns: { type: 'string', short: 'p' },
+        strings: { type: 'string', short: 's' },
         run: { type: 'string', short: 'r' },
         message: { type: 'string', short: 'm' },
         help: { type: 'boolean', short: 'h' }
@@ -58,8 +61,14 @@ function parseArguments() {
       process.exit(0);
     }
 
-    if (!values.patterns) {
-      console.error('Error: --patterns is required');
+    if (!values.patterns && !values.strings) {
+      console.error('Error: either --patterns or --strings is required');
+      showUsage();
+      process.exit(1);
+    }
+
+    if (values.patterns && values.strings) {
+      console.error('Error: cannot use both --patterns and --strings together');
       showUsage();
       process.exit(1);
     }
@@ -76,10 +85,13 @@ function parseArguments() {
       process.exit(1);
     }
 
+    const useStrings = Boolean(values.strings);
+    const rawPatterns = (values.patterns || values.strings).split(',').map(p => p.trim());
+
     return {
-      patterns: values.patterns
-        .split(',')
-        .map((p) => new RegExp(p.trim(), 'i')),
+      patterns: useStrings
+        ? rawPatterns.map(s => ({ type: 'string', value: s.toLowerCase() }))
+        : rawPatterns.map(p => ({ type: 'regex', value: new RegExp(p, 'i') })),
       runCommand: values.run,
       message: values.message,
       command: positionals[0],
@@ -133,8 +145,13 @@ async function main() {
 
     // Check each pattern against the output
     for (const pattern of config.patterns) {
-      if (pattern.test(output)) {
-        foundPatterns.add(pattern.source);
+      const isMatch = pattern.type === 'string'
+        ? output.toLowerCase().includes(pattern.value)
+        : pattern.value.test(output);
+
+      if (isMatch) {
+        const patternKey = pattern.type === 'string' ? pattern.value : pattern.value.source;
+        foundPatterns.add(patternKey);
       }
     }
 
