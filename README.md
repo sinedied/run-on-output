@@ -1,21 +1,31 @@
-# 🏃 run-on-output
+<div align="center">
+  <img src="icon.png" width="96" alt="run-on-output logo">
+  
+  # run-on-output
+  *Execute tasks when CLI output patterns are detected*
+  
+  [![Build Status](https://img.shields.io/github/actions/workflow/status/sinedied/run-on-output/ci.yml?style=flat-square)](https://github.com/sinedied/run-on-output/actions)
+  [![npm version](https://img.shields.io/npm/v/run-on-output?style=flat-square)](https://www.npmjs.com/package/run-on-output)
+  [![Node.js](https://img.shields.io/badge/Node.js->=20-3c873a?style=flat-square)](https://nodejs.org)
+  [![XO code style](https://shields.io/badge/code_style-5ed9c7?logo=xo&labelColor=gray&style=flat-square)](https://github.com/xojs/xo)
+  [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/sinedied/run-on-output/ci.yml?style=flat-square)](https://github.com/sinedied/run-on-output/actions)
-[![npm version](https://img.shields.io/npm/v/run-on-output?style=flat-square)](https://www.npmjs.com/package/run-on-output)
-[![Node version](https://img.shields.io/badge/Node.js->=20-3c873a?style=flat-square)](https://nodejs.org)
-[![XO code style](https://shields.io/badge/code_style-5ed9c7?logo=xo&labelColor=gray&style=flat-square)](https://github.com/xojs/xo)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
+  **⭐ If you like this project, star it on GitHub — it helps a lot!**
 
-> Execute tasks when CLI output patterns are detected
+  [Features](#features) • [Installation](#installation) • [Usage](#usage) • [Examples](#examples)
+
+</div>
+
 
 A lightweight Node.js CLI tool that monitors command output in real-time and triggers actions when specific patterns are found. Perfect for automation workflows, development environments, and CI/CD pipelines.
 
-**Features**:
-- **Pattern Matching**: Monitor stdout/stderr for regex patterns or plain strings
-- **Real-time Monitoring**: Output is forwarded in real-time while monitoring
-- **Flexible Actions**: Display messages or execute commands when patterns match
-- **Multiple Patterns**: Wait for multiple patterns before triggering actions
-- **Zero Dependencies**: Built with Node.js built-in modules only
+## Features
+
+- 🎯 **Pattern Matching** - Monitor stdout/stderr for regex patterns or plain strings
+- ⚡ **Real-time Monitoring** - Output is forwarded in real-time while monitoring  
+- 🔧 **Flexible Actions** - Display messages or execute commands when patterns match
+- 📝 **Multiple Patterns** - Wait for multiple patterns before triggering actions
+- 🚀 **Zero Dependencies** - Built with Node.js built-in modules only
 
 ## Installation
 
@@ -88,7 +98,7 @@ REQUIREMENTS:
 - Supports all JavaScript regex features
 - Example: `-p "listening on port \\d+,ready in \\d+ms"`
 
-### Use Cases
+## Examples
 
 **Development Workflow**
 ```bash
