@@ -119,27 +119,3 @@ run-on-output -p "server.*listening.*port" -r "npm run test:api" node api.js
 # Monitor microservices startup
 run-on-output -s "auth-service ready,user-service ready" -m "🔐 All services online" ./start-services.sh
 ```
-
-## Programmatic Usage
-
-You can also use run-on-output as a module in your Node.js applications:
-
-```javascript
-import { createPatternMatcher, executeCommand } from 'run-on-output';
-
-// Create a pattern matcher
-const config = {
-  patterns: [
-    { type: 'string', value: 'server started' },
-    { type: 'regex', value: /listening on port \d+/i }
-  ]
-};
-
-const matcher = createPatternMatcher(config);
-
-// Check output against patterns
-const allFound = matcher.checkPatterns('Server started on port 3000');
-if (allFound) {
-  console.log('All patterns matched!');
-}
-```
