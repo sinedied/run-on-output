@@ -334,7 +334,14 @@ describe('CLI Integration Tests', () => {
     it('should handle SIGINT gracefully', async () => {
       const child = spawn(
         'node',
-        [cliPath, '-s', 'never', '-m', 'test', 'sleep', '10'],
+        [
+          cliPath,
+          '-s',
+          'never',
+          '-m',
+          'test',
+          'node -e "setTimeout(() => {}, 10000)"'
+        ],
         {
           stdio: ['pipe', 'pipe', 'pipe']
         }
