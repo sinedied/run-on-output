@@ -39,7 +39,9 @@ describe('Edge Cases and Error Scenarios', () => {
     });
 
     it('should handle very long argument lists', () => {
-      const longPatterns = Array(100).fill('pattern').join(',');
+      const longPatterns = Array.from({ length: 100 })
+        .fill('pattern')
+        .join(',');
       const argv = ['-s', longPatterns, '-m', 'test', 'echo', 'hello'];
       const result = parseArguments(argv);
 
@@ -64,14 +66,31 @@ describe('Edge Cases and Error Scenarios', () => {
 
     it('should handle commands with complex arguments', () => {
       const argv = [
-        '-s', 'ready',
-        '-m', 'test',
-        'docker', 'run', '--rm', '-p', '8080:80', '--name', 'test-container', 'nginx'
+        '-s',
+        'ready',
+        '-m',
+        'test',
+        'docker',
+        'run',
+        '--rm',
+        '-p',
+        '8080:80',
+        '--name',
+        'test-container',
+        'nginx'
       ];
       const result = parseArguments(argv);
 
       expect(result.command).toBe('docker');
-      expect(result.args).toEqual(['run', '--rm', '-p', '8080:80', '--name', 'test-container', 'nginx']);
+      expect(result.args).toEqual([
+        'run',
+        '--rm',
+        '-p',
+        '8080:80',
+        '--name',
+        'test-container',
+        'nginx'
+      ]);
     });
 
     it('should handle quoted arguments in commands', () => {
@@ -107,7 +126,7 @@ describe('Edge Cases and Error Scenarios', () => {
       };
       const matcher = createPatternMatcher(config);
 
-      const largeOutput = 'a'.repeat(10000) + 'needle' + 'b'.repeat(10000);
+      const largeOutput = 'a'.repeat(10_000) + 'needle' + 'b'.repeat(10_000);
       expect(matcher.checkPatterns(largeOutput)).toBe(true);
     });
 
@@ -161,6 +180,7 @@ describe('Edge Cases and Error Scenarios', () => {
           expect(matcher.checkPatterns('server ready')).toBe(true);
           break;
         }
+
         expect(result).toBe(false);
       }
     });

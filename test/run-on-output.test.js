@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { spawn } from 'node:child_process';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   showUsage,
   parseArguments,
@@ -44,7 +44,9 @@ describe('run-on-output', () => {
     it('should display usage information', () => {
       showUsage();
       expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('run-on-output - Execute tasks when CLI output patterns are detected')
+        expect.stringContaining(
+          'run-on-output - Execute tasks when CLI output patterns are detected'
+        )
       );
     });
 
@@ -74,14 +76,24 @@ describe('run-on-output', () => {
 
       expect(result.patterns).toHaveLength(2);
       expect(result.patterns[0]).toEqual({ type: 'string', value: 'ready' });
-      expect(result.patterns[1]).toEqual({ type: 'string', value: 'connected' });
+      expect(result.patterns[1]).toEqual({
+        type: 'string',
+        value: 'connected'
+      });
       expect(result.message).toBe('All good!');
       expect(result.command).toBe('npm');
       expect(result.args).toEqual(['start']);
     });
 
     it('should parse regex patterns correctly', () => {
-      const argv = ['-p', 'listening on port \\d+,ready', '-r', 'echo "done"', 'node', 'app.js'];
+      const argv = [
+        '-p',
+        String.raw`listening on port \d+,ready`,
+        '-r',
+        'echo "done"',
+        'node',
+        'app.js'
+      ];
       const result = parseArguments(argv);
 
       expect(result.patterns).toHaveLength(2);
@@ -89,7 +101,9 @@ describe('run-on-output', () => {
         type: 'regex',
         value: expect.any(RegExp)
       });
-      expect(result.patterns[0].value.source).toBe('listening on port \\d+');
+      expect(result.patterns[0].value.source).toBe(
+        String.raw`listening on port \d+`
+      );
       expect(result.patterns[0].value.flags).toBe('i');
       expect(result.runCommand).toBe('echo "done"');
       expect(result.command).toBe('node');
@@ -104,29 +118,46 @@ describe('run-on-output', () => {
     it('should require either patterns or strings', () => {
       const argv = ['-m', 'test', 'echo', 'hello'];
       expect(() => parseArguments(argv)).toThrow('process.exit(1)');
-      expect(console.error).toHaveBeenCalledWith('Error: either --patterns or --strings is required');
+      expect(console.error).toHaveBeenCalledWith(
+        'Error: either --patterns or --strings is required'
+      );
     });
 
     it('should not allow both patterns and strings', () => {
       const argv = ['-p', 'test', '-s', 'test', '-m', 'msg', 'echo', 'hello'];
       expect(() => parseArguments(argv)).toThrow('process.exit(1)');
-      expect(console.error).toHaveBeenCalledWith('Error: cannot use both --patterns and --strings together');
+      expect(console.error).toHaveBeenCalledWith(
+        'Error: cannot use both --patterns and --strings together'
+      );
     });
 
     it('should require a command', () => {
       const argv = ['-s', 'test', '-m', 'msg'];
       expect(() => parseArguments(argv)).toThrow('process.exit(1)');
-      expect(console.error).toHaveBeenCalledWith('Error: command to run is required');
+      expect(console.error).toHaveBeenCalledWith(
+        'Error: command to run is required'
+      );
     });
 
     it('should require either run or message', () => {
       const argv = ['-s', 'test', 'echo', 'hello'];
       expect(() => parseArguments(argv)).toThrow('process.exit(1)');
-      expect(console.error).toHaveBeenCalledWith('Error: either --run or --message is required');
+      expect(console.error).toHaveBeenCalledWith(
+        'Error: either --run or --message is required'
+      );
     });
 
     it('should handle both run and message options', () => {
-      const argv = ['-s', 'ready', '-m', 'Done!', '-r', 'echo test', 'npm', 'start'];
+      const argv = [
+        '-s',
+        'ready',
+        '-m',
+        'Done!',
+        '-r',
+        'echo test',
+        'npm',
+        'start'
+      ];
       const result = parseArguments(argv);
 
       expect(result.message).toBe('Done!');
@@ -158,7 +189,17 @@ describe('run-on-output', () => {
     });
 
     it('should handle command arguments', () => {
-      const argv = ['-s', 'ready', '-m', 'test', 'npm', 'run', 'dev', '--port', '3000'];
+      const argv = [
+        '-s',
+        'ready',
+        '-m',
+        'test',
+        'npm',
+        'run',
+        'dev',
+        '--port',
+        '3000'
+      ];
       const result = parseArguments(argv);
 
       expect(result.command).toBe('npm');
@@ -181,7 +222,10 @@ describe('run-on-output', () => {
       };
       mockSpawn.mockReturnValue(mockChild);
 
-      await expect(executeCommand('echo hello', [])).resolves.toEqual({ stdout: '', stderr: '' });
+      await expect(executeCommand('echo hello', [])).resolves.toEqual({
+        stdout: '',
+        stderr: ''
+      });
       expect(mockSpawn).toHaveBeenCalledWith('echo', ['hello'], {
         shell: true,
         stdio: ['ignore', 'inherit', 'inherit']
@@ -198,7 +242,9 @@ describe('run-on-output', () => {
       };
       mockSpawn.mockReturnValue(mockChild);
 
-      await expect(executeCommand('invalid-command', [])).rejects.toThrow('Command failed');
+      await expect(executeCommand('invalid-command', [])).rejects.toThrow(
+        'Command failed'
+      );
     });
 
     it('should reject on non-zero exit code', async () => {
@@ -211,7 +257,9 @@ describe('run-on-output', () => {
       };
       mockSpawn.mockReturnValue(mockChild);
 
-      await expect(executeCommand('false', [])).rejects.toThrow('Command failed: exit code 1');
+      await expect(executeCommand('false', [])).rejects.toThrow(
+        'Command failed: exit code 1'
+      );
     });
 
     it('should handle command with arguments', async () => {
@@ -225,10 +273,14 @@ describe('run-on-output', () => {
       mockSpawn.mockReturnValue(mockChild);
 
       await executeCommand('node app.js', ['--port', '3000']);
-      expect(mockSpawn).toHaveBeenCalledWith('node', ['app.js', '--port', '3000'], {
-        shell: true,
-        stdio: ['ignore', 'inherit', 'inherit']
-      });
+      expect(mockSpawn).toHaveBeenCalledWith(
+        'node',
+        ['app.js', '--port', '3000'],
+        {
+          shell: true,
+          stdio: ['ignore', 'inherit', 'inherit']
+        }
+      );
     });
   });
 
@@ -290,7 +342,9 @@ describe('run-on-output', () => {
         };
         const matcher = createPatternMatcher(config);
 
-        expect(matcher.checkPatterns('Server listening on port 3000')).toBe(true);
+        expect(matcher.checkPatterns('Server listening on port 3000')).toBe(
+          true
+        );
         expect(matcher.isComplete()).toBe(true);
       });
 
@@ -303,7 +357,9 @@ describe('run-on-output', () => {
         };
         const matcher = createPatternMatcher(config);
 
-        expect(matcher.checkPatterns('Server listening on port 8080')).toBe(false);
+        expect(matcher.checkPatterns('Server listening on port 8080')).toBe(
+          false
+        );
         expect(matcher.checkPatterns('MongoDB database connected')).toBe(true);
         expect(matcher.isComplete()).toBe(true);
       });
@@ -316,8 +372,12 @@ describe('run-on-output', () => {
         const matcher2 = createPatternMatcher(config);
         const matcher3 = createPatternMatcher(config);
 
-        expect(matcher1.checkPatterns('webpack compiled successfully in 1234ms')).toBe(true);
-        expect(matcher2.checkPatterns('webpack compiled with warnings in 567ms')).toBe(true);
+        expect(
+          matcher1.checkPatterns('webpack compiled successfully in 1234ms')
+        ).toBe(true);
+        expect(
+          matcher2.checkPatterns('webpack compiled with warnings in 567ms')
+        ).toBe(true);
         expect(matcher3.checkPatterns('webpack failed to compile')).toBe(false);
       });
     });
@@ -368,7 +428,9 @@ describe('run-on-output', () => {
         };
         const matcher = createPatternMatcher(config);
 
-        expect(matcher.checkPatterns('Server ready and database connected')).toBe(true);
+        expect(
+          matcher.checkPatterns('Server ready and database connected')
+        ).toBe(true);
         expect(matcher.isComplete()).toBe(true);
       });
     });

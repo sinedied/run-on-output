@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -50,6 +50,7 @@ describe('CLI Integration Tests', () => {
       if (input) {
         child.stdin.write(input);
       }
+
       child.stdin.end();
     });
   }
@@ -58,7 +59,9 @@ describe('CLI Integration Tests', () => {
     it('should show help when --help is provided', async () => {
       const result = await runCLI(['--help']);
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('run-on-output - Execute tasks when CLI output patterns are detected');
+      expect(result.stdout).toContain(
+        'run-on-output - Execute tasks when CLI output patterns are detected'
+      );
       expect(result.stdout).toContain('USAGE:');
       expect(result.stdout).toContain('OPTIONS:');
       expect(result.stdout).toContain('EXAMPLES:');
@@ -67,7 +70,9 @@ describe('CLI Integration Tests', () => {
     it('should show help when -h is provided', async () => {
       const result = await runCLI(['-h']);
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('run-on-output - Execute tasks when CLI output patterns are detected');
+      expect(result.stdout).toContain(
+        'run-on-output - Execute tasks when CLI output patterns are detected'
+      );
     });
   });
 
@@ -75,13 +80,26 @@ describe('CLI Integration Tests', () => {
     it('should error when no patterns are provided', async () => {
       const result = await runCLI(['-m', 'test', 'echo', 'hello']);
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain('Error: either --patterns or --strings is required');
+      expect(result.stderr).toContain(
+        'Error: either --patterns or --strings is required'
+      );
     });
 
     it('should error when both patterns and strings are provided', async () => {
-      const result = await runCLI(['-p', 'test', '-s', 'test', '-m', 'msg', 'echo', 'hello']);
+      const result = await runCLI([
+        '-p',
+        'test',
+        '-s',
+        'test',
+        '-m',
+        'msg',
+        'echo',
+        'hello'
+      ]);
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain('Error: cannot use both --patterns and --strings together');
+      expect(result.stderr).toContain(
+        'Error: cannot use both --patterns and --strings together'
+      );
     });
 
     it('should error when no command is provided', async () => {
@@ -93,16 +111,21 @@ describe('CLI Integration Tests', () => {
     it('should error when neither run nor message is provided', async () => {
       const result = await runCLI(['-s', 'test', 'echo', 'hello']);
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain('Error: either --run or --message is required');
+      expect(result.stderr).toContain(
+        'Error: either --run or --message is required'
+      );
     });
   });
 
   describe('Pattern Matching', () => {
     it('should detect string patterns and show message', async () => {
       const result = await runCLI([
-        '-s', 'hello',
-        '-m', 'Pattern found!',
-        'echo', 'hello world'
+        '-s',
+        'hello',
+        '-m',
+        'Pattern found!',
+        'echo',
+        'hello world'
       ]);
 
       expect(result.code).toBe(0);
@@ -112,9 +135,12 @@ describe('CLI Integration Tests', () => {
 
     it('should detect multiple string patterns', async () => {
       const result = await runCLI([
-        '-s', 'hello,world',
-        '-m', 'All patterns found!',
-        'echo', 'hello beautiful world'
+        '-s',
+        'hello,world',
+        '-m',
+        'All patterns found!',
+        'echo',
+        'hello beautiful world'
       ]);
 
       expect(result.code).toBe(0);
@@ -124,9 +150,12 @@ describe('CLI Integration Tests', () => {
 
     it('should detect regex patterns', async () => {
       const result = await runCLI([
-        '-p', 'h\\w+o',
-        '-m', 'Regex matched!',
-        'echo', 'hello world'
+        '-p',
+        String.raw`h\w+o`,
+        '-m',
+        'Regex matched!',
+        'echo',
+        'hello world'
       ]);
 
       expect(result.code).toBe(0);
@@ -136,9 +165,12 @@ describe('CLI Integration Tests', () => {
 
     it('should not trigger action when pattern is not found', async () => {
       const result = await runCLI([
-        '-s', 'notfound',
-        '-m', 'This should not appear',
-        'echo', 'hello world'
+        '-s',
+        'notfound',
+        '-m',
+        'This should not appear',
+        'echo',
+        'hello world'
       ]);
 
       expect(result.code).toBe(0);
@@ -148,9 +180,12 @@ describe('CLI Integration Tests', () => {
 
     it('should handle case insensitive string matching', async () => {
       const result = await runCLI([
-        '-s', 'hello',
-        '-m', 'Case insensitive match!',
-        'echo', 'HELLO WORLD'
+        '-s',
+        'hello',
+        '-m',
+        'Case insensitive match!',
+        'echo',
+        'HELLO WORLD'
       ]);
 
       expect(result.code).toBe(0);
@@ -162,9 +197,12 @@ describe('CLI Integration Tests', () => {
   describe('Command Execution', () => {
     it('should execute run command when patterns are found', async () => {
       const result = await runCLI([
-        '-s', 'hello',
-        '-r', 'echo "Command executed!"',
-        'echo', 'hello world'
+        '-s',
+        'hello',
+        '-r',
+        'echo "Command executed!"',
+        'echo',
+        'hello world'
       ]);
 
       expect(result.code).toBe(0);
@@ -174,10 +212,14 @@ describe('CLI Integration Tests', () => {
 
     it('should execute both message and run command', async () => {
       const result = await runCLI([
-        '-s', 'hello',
-        '-m', 'Pattern found!',
-        '-r', 'echo "Command executed!"',
-        'echo', 'hello world'
+        '-s',
+        'hello',
+        '-m',
+        'Pattern found!',
+        '-r',
+        'echo "Command executed!"',
+        'echo',
+        'hello world'
       ]);
 
       expect(result.code).toBe(0);
@@ -190,8 +232,10 @@ describe('CLI Integration Tests', () => {
   describe('Error Handling', () => {
     it('should handle invalid command gracefully', async () => {
       const result = await runCLI([
-        '-s', 'test',
-        '-m', 'Found',
+        '-s',
+        'test',
+        '-m',
+        'Found',
         'nonexistent-command'
       ]);
 
@@ -201,9 +245,12 @@ describe('CLI Integration Tests', () => {
 
     it('should continue when run command fails', async () => {
       const result = await runCLI([
-        '-s', 'hello',
-        '-r', 'exit 1',
-        'echo', 'hello world'
+        '-s',
+        'hello',
+        '-r',
+        'exit 1',
+        'echo',
+        'hello world'
       ]);
 
       expect(result.code).toBe(0); // Main command should still complete
@@ -215,9 +262,12 @@ describe('CLI Integration Tests', () => {
   describe('Output Forwarding', () => {
     it('should forward stdout in real-time', async () => {
       const result = await runCLI([
-        '-s', 'never-found',
-        '-m', 'Not shown',
-        'echo', 'This output should be forwarded'
+        '-s',
+        'never-found',
+        '-m',
+        'Not shown',
+        'echo',
+        'This output should be forwarded'
       ]);
 
       expect(result.stdout).toContain('This output should be forwarded');
@@ -226,9 +276,13 @@ describe('CLI Integration Tests', () => {
     it('should monitor both stdout and stderr', async () => {
       // Create a command that outputs to stderr and contains our pattern
       const result = await runCLI([
-        '-s', 'error',
-        '-m', 'Found in stderr!',
-        'node', '-e', 'console.error("error message"); console.log("stdout message");'
+        '-s',
+        'error',
+        '-m',
+        'Found in stderr!',
+        'node',
+        '-e',
+        'console.error("error message"); console.log("stdout message");'
       ]);
 
       expect(result.code).toBe(0);
@@ -240,17 +294,16 @@ describe('CLI Integration Tests', () => {
 
   describe('Signal Handling', () => {
     it('should handle SIGINT gracefully', async () => {
-      const child = spawn('node', [
-        cliPath,
-        '-s', 'never',
-        '-m', 'test',
-        'sleep', '10'
-      ], {
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
+      const child = spawn(
+        'node',
+        [cliPath, '-s', 'never', '-m', 'test', 'sleep', '10'],
+        {
+          stdio: ['pipe', 'pipe', 'pipe']
+        }
+      );
 
       // Give the process a moment to start
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       child.kill('SIGINT');
 

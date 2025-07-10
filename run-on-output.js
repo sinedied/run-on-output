@@ -40,10 +40,20 @@ EXAMPLES:
   run-on-output -s "ready" -m "Server is up" -r "open http://localhost:3000" npm start`);
 }
 
+// eslint-disable-next-line complexity
 export function parseArguments(argv) {
   // Find the first argument that doesn't start with '-' and isn't a value for an option
   let commandStartIndex = -1;
-  const optionsWithValues = new Set(['p', 'patterns', 's', 'strings', 'r', 'run', 'm', 'message']);
+  const optionsWithValues = new Set([
+    'p',
+    'patterns',
+    's',
+    'strings',
+    'r',
+    'run',
+    'm',
+    'message'
+  ]);
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -67,11 +77,14 @@ export function parseArguments(argv) {
     }
   }
 
-  let values, positionals;
+  let values;
+  let positionals;
 
   // Parse only up to the command start
-  const argsToParse = commandStartIndex === -1 ? argv : argv.slice(0, commandStartIndex);
-  const commandArgs = commandStartIndex === -1 ? [] : argv.slice(commandStartIndex);
+  const argsToParse =
+    commandStartIndex === -1 ? argv : argv.slice(0, commandStartIndex);
+  const commandArgs =
+    commandStartIndex === -1 ? [] : argv.slice(commandStartIndex);
 
   try {
     const parsed = parseArgs({
@@ -123,19 +136,29 @@ export function parseArguments(argv) {
   }
 
   const useStrings = Boolean(values.strings);
-  const rawPatterns = (values.patterns || values.strings).split(',').map(p => p.trim());
+  const rawPatterns = (values.patterns || values.strings)
+    .split(',')
+    .map((p) => p.trim());
 
   let patterns;
   if (useStrings) {
-    patterns = rawPatterns.map(s => ({ type: 'string', value: s.toLowerCase() }));
+    patterns = rawPatterns.map((s) => ({
+      type: 'string',
+      value: s.toLowerCase()
+    }));
   } else {
-    patterns = rawPatterns.map(p => {
+    patterns = rawPatterns.map((p) => {
       try {
         return { type: 'regex', value: new RegExp(p, 'i') };
-      } catch (regexError) {
+      } catch {
         // Create a regex that matches the pattern literally
-        const escapedPattern = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        console.warn(`Warning: Invalid regex pattern '${p}', treating as literal string`);
+        const escapedPattern = p.replaceAll(
+          /[.*+?^${}()|[\]\\]/g,
+          String.raw`\$&`
+        );
+        console.warn(
+          `Warning: Invalid regex pattern '${p}', treating as literal string`
+        );
         return { type: 'regex', value: new RegExp(escapedPattern, 'i') };
       }
     });
@@ -156,7 +179,9 @@ export async function executeCommand(command, args, options = {}) {
     const cmd = parts[0];
     const cmdArgs = [...parts.slice(1), ...args];
 
-    const stdio = options.captureOutput ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'inherit', 'inherit'];
+    const stdio = options.captureOutput
+      ? ['ignore', 'pipe', 'pipe']
+      : ['ignore', 'inherit', 'inherit'];
 
     const child = spawn(cmd, cmdArgs, {
       shell: true,
@@ -181,10 +206,11 @@ export async function executeCommand(command, args, options = {}) {
     }
 
     child.on('error', (error) => {
-      const errorMsg = `Command failed: ${error.message}`;
+      const errorMessage = `Command failed: ${error.message}`;
       if (options.captureOutput) {
-        console.error(errorMsg);
+        console.error(errorMessage);
       }
+
       reject(error);
     });
 
@@ -192,11 +218,12 @@ export async function executeCommand(command, args, options = {}) {
       if (code === 0) {
         resolve({ stdout, stderr });
       } else {
-        const errorMsg = `Command failed: exit code ${code}`;
+        const errorMessage = `Command failed: exit code ${code}`;
         if (options.captureOutput) {
-          console.error(errorMsg);
+          console.error(errorMessage);
         }
-        reject(new Error(errorMsg));
+
+        reject(new Error(errorMessage));
       }
     });
   });
@@ -210,12 +237,14 @@ export function createPatternMatcher(config) {
     if (allPatternsFound) return false;
 
     for (const pattern of config.patterns) {
-      const isMatch = pattern.type === 'string'
-        ? output.toLowerCase().includes(pattern.value)
-        : pattern.value.test(output);
+      const isMatch =
+        pattern.type === 'string'
+          ? output.toLowerCase().includes(pattern.value)
+          : pattern.value.test(output);
 
       if (isMatch) {
-        const patternKey = pattern.type === 'string' ? pattern.value : pattern.value.source;
+        const patternKey =
+          pattern.type === 'string' ? pattern.value : pattern.value.source;
         foundPatterns.add(patternKey);
       }
     }
@@ -234,7 +263,7 @@ export function createPatternMatcher(config) {
 export async function run(args = process.argv.slice(2)) {
   const config = parseArguments(args);
   const patternMatcher = createPatternMatcher(config);
-  let runningActions = [];
+  const runningActions = [];
 
   const child = spawn(config.command, config.args, {
     stdio: ['inherit', 'pipe', 'pipe'],
@@ -253,10 +282,11 @@ export async function run(args = process.argv.slice(2)) {
       }
 
       if (config.runCommand) {
-        const actionPromise = executeCommand(config.runCommand, [], { captureOutput: true })
-          .catch(error => {
-            // Error already logged in executeCommand
-          });
+        const actionPromise = executeCommand(config.runCommand, [], {
+          captureOutput: true
+        }).catch((_error) => {
+          // Error already logged in executeCommand
+        });
         runningActions.push(actionPromise);
       }
     }
@@ -278,12 +308,13 @@ export async function run(args = process.argv.slice(2)) {
     await Promise.allSettled(runningActions);
 
     // If the command failed to start or had an error, report it
-    if (code !== 0 && code !== undefined) {
-      // Check if this looks like a "command not found" error
-      if (code === 127) {
-        console.error('Failed to start command: Command not found');
-        process.exit(1);
-      }
+    if (
+      code !== 0 &&
+      code !== undefined && // Check if this looks like a "command not found" error
+      code === 127
+    ) {
+      console.error('Failed to start command: Command not found');
+      process.exit(1);
     }
 
     // Exit successfully - we completed our monitoring task

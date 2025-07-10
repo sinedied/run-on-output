@@ -52,6 +52,8 @@
     "space": true,
     "prettier": true,
     "rules": {
+      "max-nested-callbacks": "off",
+      "unicorn/no-process-exit": "off"
     }
   },
   "engines": {
