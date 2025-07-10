@@ -4,7 +4,7 @@ import process from 'node:process';
 import { spawn } from 'node:child_process';
 import { parseArgs } from 'node:util';
 
-function showUsage() {
+export function showUsage() {
   console.log(`run-on-output - Execute tasks when CLI output patterns are detected
 
 USAGE:
@@ -42,10 +42,42 @@ EXAMPLES:
   run-on-output -s "ready" -m "Server is up" -r "open http://localhost:3000" npm start`);
 }
 
-function parseArguments() {
+export function parseArguments(argv = process.argv.slice(2)) {
+  // Find the first argument that doesn't start with '-' and isn't a value for an option
+  let commandStartIndex = -1;
+  const optionsWithValues = new Set(['p', 'patterns', 's', 'strings', 'r', 'run', 'm', 'message']);
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (!arg.startsWith('-')) {
+      commandStartIndex = i;
+      break;
+    }
+
+    // Skip the next argument if this option takes a value
+    if (arg.startsWith('--')) {
+      const optName = arg.slice(2);
+      if (optionsWithValues.has(optName)) {
+        i++; // Skip the value
+      }
+    } else if (arg.startsWith('-') && arg.length > 1) {
+      // Handle short options like -s, -p, etc.
+      const optName = arg.slice(1);
+      if (optionsWithValues.has(optName)) {
+        i++; // Skip the value
+      }
+    }
+  }
+
+  let values, positionals;
+
+  // Parse only up to the command start
+  const argsToParse = commandStartIndex === -1 ? argv : argv.slice(0, commandStartIndex);
+  const commandArgs = commandStartIndex === -1 ? [] : argv.slice(commandStartIndex);
+
   try {
-    const { values, positionals } = parseArgs({
-      args: process.argv.slice(2),
+    const parsed = parseArgs({
+      args: argsToParse,
       options: {
         patterns: { type: 'string', short: 'p' },
         strings: { type: 'string', short: 's' },
@@ -53,97 +85,132 @@ function parseArguments() {
         message: { type: 'string', short: 'm' },
         help: { type: 'boolean', short: 'h' }
       },
-      allowPositionals: true
+      allowPositionals: false
     });
-
-    if (values.help) {
-      showUsage();
-      process.exit(0);
-    }
-
-    if (!values.patterns && !values.strings) {
-      console.error('Error: either --patterns or --strings is required');
-      showUsage();
-      process.exit(1);
-    }
-
-    if (values.patterns && values.strings) {
-      console.error('Error: cannot use both --patterns and --strings together');
-      showUsage();
-      process.exit(1);
-    }
-
-    if (positionals.length === 0) {
-      console.error('Error: command to run is required');
-      showUsage();
-      process.exit(1);
-    }
-
-    if (!values.run && !values.message) {
-      console.error('Error: either --run or --message is required');
-      showUsage();
-      process.exit(1);
-    }
-
-    const useStrings = Boolean(values.strings);
-    const rawPatterns = (values.patterns || values.strings).split(',').map(p => p.trim());
-
-    return {
-      patterns: useStrings
-        ? rawPatterns.map(s => ({ type: 'string', value: s.toLowerCase() }))
-        : rawPatterns.map(p => ({ type: 'regex', value: new RegExp(p, 'i') })),
-      runCommand: values.run,
-      message: values.message,
-      command: positionals[0],
-      args: positionals.slice(1)
-    };
+    values = parsed.values;
+    positionals = commandArgs;
   } catch (error) {
     console.error('Error parsing arguments:', error.message);
     showUsage();
     process.exit(1);
   }
+
+  if (values.help) {
+    showUsage();
+    process.exit(0);
+  }
+
+  if (!values.patterns && !values.strings) {
+    console.error('Error: either --patterns or --strings is required');
+    showUsage();
+    process.exit(1);
+  }
+
+  if (values.patterns && values.strings) {
+    console.error('Error: cannot use both --patterns and --strings together');
+    showUsage();
+    process.exit(1);
+  }
+
+  if (positionals.length === 0) {
+    console.error('Error: command to run is required');
+    showUsage();
+    process.exit(1);
+  }
+
+  if (!values.run && !values.message) {
+    console.error('Error: either --run or --message is required');
+    showUsage();
+    process.exit(1);
+  }
+
+  const useStrings = Boolean(values.strings);
+  const rawPatterns = (values.patterns || values.strings).split(',').map(p => p.trim());
+
+  let patterns;
+  if (useStrings) {
+    patterns = rawPatterns.map(s => ({ type: 'string', value: s.toLowerCase() }));
+  } else {
+    patterns = rawPatterns.map(p => {
+      try {
+        return { type: 'regex', value: new RegExp(p, 'i') };
+      } catch (regexError) {
+        // Create a regex that matches the pattern literally
+        const escapedPattern = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        console.warn(`Warning: Invalid regex pattern '${p}', treating as literal string`);
+        return { type: 'regex', value: new RegExp(escapedPattern, 'i') };
+      }
+    });
+  }
+
+  return {
+    patterns,
+    runCommand: values.run,
+    message: values.message,
+    command: positionals[0],
+    args: positionals.slice(1)
+  };
 }
 
-async function executeCommand(command, args) {
+export async function executeCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const parts = command.split(' ');
     const cmd = parts[0];
-    const cmdArgs = [parts.slice(1), ...args];
+    const cmdArgs = [...parts.slice(1), ...args];
+
+    const stdio = options.captureOutput ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'inherit', 'inherit'];
 
     const child = spawn(cmd, cmdArgs, {
       shell: true,
-      stdio: 'inherit'
+      stdio
     });
 
-    child.on('error', reject);
+    let stdout = '';
+    let stderr = '';
+
+    if (options.captureOutput) {
+      child.stdout.on('data', (data) => {
+        const output = data.toString();
+        stdout += output;
+        process.stdout.write(output); // Forward to console
+      });
+
+      child.stderr.on('data', (data) => {
+        const output = data.toString();
+        stderr += output;
+        process.stderr.write(output); // Forward to console
+      });
+    }
+
+    child.on('error', (error) => {
+      const errorMsg = `Command failed: ${error.message}`;
+      if (options.captureOutput) {
+        console.error(errorMsg);
+      }
+      reject(error);
+    });
+
     child.on('exit', (code) => {
       if (code === 0) {
-        resolve();
+        resolve({ stdout, stderr });
       } else {
-        reject(new Error(`Command exited with code ${code}`));
+        const errorMsg = `Command failed: exit code ${code}`;
+        if (options.captureOutput) {
+          console.error(errorMsg);
+        }
+        reject(new Error(errorMsg));
       }
     });
   });
 }
 
-async function main() {
-  const config = parseArguments();
-
+export function createPatternMatcher(config) {
   const foundPatterns = new Set();
   let allPatternsFound = false;
 
-  const child = spawn(config.command, config.args, {
-    stdio: ['inherit', 'pipe', 'pipe'],
-    shell: true
-  });
+  function checkPatterns(output) {
+    if (allPatternsFound) return false;
 
-  async function checkOutput(data) {
-    const output = data.toString();
-    process.stdout.write(output); // Forward output to console
-
-    if (allPatternsFound) return;
-
-    // Check each pattern against the output
     for (const pattern of config.patterns) {
       const isMatch = pattern.type === 'string'
         ? output.toLowerCase().includes(pattern.value)
@@ -155,20 +222,44 @@ async function main() {
       }
     }
 
-    // Check if all patterns have been found
     if (foundPatterns.size === config.patterns.length && !allPatternsFound) {
       allPatternsFound = true;
+      return true;
+    }
 
+    return false;
+  }
+
+  return { checkPatterns, foundPatterns, isComplete: () => allPatternsFound };
+}
+
+async function main() {
+  const config = parseArguments();
+  const patternMatcher = createPatternMatcher(config);
+  let runningActions = [];
+
+  const child = spawn(config.command, config.args, {
+    stdio: ['inherit', 'pipe', 'pipe'],
+    shell: true
+  });
+
+  async function checkOutput(data) {
+    const output = data.toString();
+    process.stdout.write(output); // Forward output to console
+
+    const allFound = patternMatcher.checkPatterns(output);
+
+    if (allFound) {
       if (config.message) {
         console.log(config.message);
       }
 
       if (config.runCommand) {
-        try {
-          await executeCommand(config.runCommand, []);
-        } catch (error) {
-          console.error('[ERROR] Command failed:', error.message);
-        }
+        const actionPromise = executeCommand(config.runCommand, [], { captureOutput: true })
+          .catch(error => {
+            // Error already logged in executeCommand
+          });
+        runningActions.push(actionPromise);
       }
     }
   }
@@ -180,12 +271,25 @@ async function main() {
   });
 
   child.on('error', (error) => {
-    console.error('[ERROR] Failed to start command:', error.message);
+    console.error('Failed to start command:', error.message);
     process.exit(1);
   });
 
-  child.on('exit', (code, _signal) => {
-    process.exit(code || 0);
+  child.on('exit', async (code, _signal) => {
+    // Wait for all running actions to complete before exiting
+    await Promise.allSettled(runningActions);
+
+    // If the command failed to start or had an error, report it
+    if (code !== 0 && code !== undefined) {
+      // Check if this looks like a "command not found" error
+      if (code === 127) {
+        console.error('Failed to start command: Command not found');
+        process.exit(1);
+      }
+    }
+
+    // Exit successfully - we completed our monitoring task
+    process.exit(0);
   });
 
   // Handle process termination
@@ -198,9 +302,15 @@ async function main() {
   });
 }
 
-try {
-  await main();
-} catch (error) {
-  console.error('[ERROR] run-on-output failed:', error.message);
-  process.exit(1);
+// Export for testing, but this file is not meant to be imported in production
+export { main };
+
+// CLI execution - this runs when file is executed directly
+if (process.argv[1] && process.argv[1].endsWith('run-on-output.js')) {
+  try {
+    await main();
+  } catch (error) {
+    console.error('[ERROR] run-on-output failed:', error.message);
+    process.exit(1);
+  }
 }
