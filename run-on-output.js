@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { parseArgs } from 'node:util';
 
 function showUsage() {
-  console.log(`run-on-output - Execute commands when output patterns are detected
+  console.log(`run-on-output - Execute commands or show message when output patterns are detected
 
 USAGE:
   run-on-output [OPTIONS] <command> [args...]
