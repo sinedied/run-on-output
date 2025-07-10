@@ -206,13 +206,21 @@ export async function executeCommand(command, args, options = {}) {
       child.stdout.on('data', (data) => {
         const output = data.toString();
         stdout += output;
-        process.stdout.write(output); // Forward to console
+        if (typeof options.onStdout === 'function') {
+          options.onStdout(output);
+        } else {
+          process.stdout.write(output);
+        }
       });
 
       child.stderr.on('data', (data) => {
         const output = data.toString();
         stderr += output;
-        process.stderr.write(output); // Forward to console
+        if (typeof options.onStderr === 'function') {
+          options.onStderr(output);
+        } else {
+          process.stderr.write(output);
+        }
       });
     }
 
@@ -274,87 +282,111 @@ export function createPatternMatcher(config) {
 export async function run(args = process.argv.slice(2)) {
   const config = parseArguments(args);
   const patternMatcher = createPatternMatcher(config);
-  const runningActions = [];
+  let outputBuffer = '';
+  let errorBuffer = '';
+  let allPatternsFound = false;
+
+  function appendOutput(data) {
+    const output = data.toString();
+    outputBuffer += output;
+    return output;
+  }
+
+  function appendError(data) {
+    const output = data.toString();
+    errorBuffer += output;
+    return output;
+  }
+
+  async function checkOutput(data) {
+    const output = appendOutput(data);
+    const allFound = patternMatcher.checkPatterns(output);
+    if (allFound && !allPatternsFound) {
+      allPatternsFound = true;
+    }
+  }
 
   const child = spawn(config.command, config.args, {
     stdio: ['inherit', 'pipe', 'pipe'],
     shell: true
   });
 
-  async function checkOutput(data) {
-    const output = data.toString();
-    process.stdout.write(output); // Forward output to console
-
-    const allFound = patternMatcher.checkPatterns(output);
-
-    if (allFound) {
-      if (config.message) {
-        console.log(config.message);
-      }
-
-      if (config.runCommand) {
-        const actionPromise = (async () => {
-          try {
-            await executeCommand(config.runCommand, [], {
-              captureOutput: true
-            });
-          } catch {
-            // Error already logged in executeCommand
-          }
-        })();
-        runningActions.push(actionPromise);
-      }
-
-      if (config.npmScript) {
-        const actionPromise = (async () => {
-          try {
-            await executeCommand(`npm run -s ${config.npmScript}`, [], {
-              captureOutput: true
-            });
-          } catch {
-            // Error already logged in executeCommand
-          }
-        })();
-        runningActions.push(actionPromise);
-      }
-    }
-  }
-
   child.stdout.on('data', checkOutput);
-  child.stderr.on('data', async (data) => {
-    process.stderr.write(data); // Forward stderr to console
-    await checkOutput(data); // Also check stderr for patterns
+  child.stderr.on('data', (data) => {
+    appendError(data);
+    checkOutput(data);
   });
 
   child.on('error', (error) => {
-    console.error('Failed to start command:', error.message);
+    errorBuffer += 'Failed to start command: ' + error.message + '\n';
+    process.stdout.write(outputBuffer);
+    process.stderr.write(errorBuffer);
     process.exit(1);
   });
 
   child.on('exit', async (code, _signal) => {
-    // Wait for all running actions to complete before exiting
-    await Promise.allSettled(runningActions);
+    let exitCode = 0;
+    if (allPatternsFound) {
+      if (config.message) {
+        outputBuffer += config.message + '\n';
+      }
 
-    // If the command failed to start or had an error, report it
-    if (
-      code !== 0 &&
-      code !== undefined && // Check if this looks like a "command not found" error
-      code === 127
-    ) {
-      console.error('Failed to start command: Command not found');
-      process.exit(1);
+      if (config.runCommand) {
+        try {
+          const { stdout, stderr } = await executeCommand(
+            config.runCommand,
+            [],
+            { captureOutput: true }
+          );
+          if (stdout) outputBuffer += stdout;
+          if (stderr) errorBuffer += stderr;
+        } catch {
+          // Error already logged
+        }
+      }
+
+      if (config.npmScript) {
+        try {
+          const { stdout, stderr } = await executeCommand(
+            `npm run -s ${config.npmScript}`,
+            [],
+            { captureOutput: true }
+          );
+          if (stdout) outputBuffer += stdout;
+          if (stderr) errorBuffer += stderr;
+        } catch {
+          // Error already logged
+        }
+      }
     }
 
-    // Exit successfully - we completed our monitoring task
-    process.exit(0);
+    if (code !== 0 && code !== undefined && code === 127) {
+      errorBuffer += 'Failed to start command: Command not found\n';
+      exitCode = 1;
+    }
+
+    process.stdout.write(outputBuffer);
+    process.stderr.write(errorBuffer);
+
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
+    process.exit(exitCode);
   });
 
   // Handle process termination
   process.on('SIGINT', () => {
+    // Forward SIGINT to child and wait for it to exit, then exit self
     child.kill('SIGINT');
+    setTimeout(() => {
+      process.exit(130); // 128 + SIGINT
+    }, 500);
   });
 
   process.on('SIGTERM', () => {
     child.kill('SIGTERM');
+    setTimeout(() => {
+      process.exit(143); // 128 + SIGTERM
+    }, 500);
   });
 }
