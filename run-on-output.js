@@ -362,11 +362,7 @@ function handleChildProcessError(error, buffer) {
 }
 
 function determineExitCode(childExitCode) {
-  if (
-    childExitCode !== 0 &&
-    childExitCode !== undefined &&
-    childExitCode === 127
-  ) {
+  if (childExitCode !== 0 && childExitCode !== undefined) {
     return 1;
   }
 
@@ -417,7 +413,10 @@ export async function run(args = process.argv.slice(2)) {
       await executeActionsWhenPatternsFound(config, buffer);
     }
 
-    if (code === 127) {
+    // Handle command not found scenarios across different platforms
+    // On Unix systems, 127 typically means command not found
+    // On Windows, different exit codes may be used
+    if (code !== 0 && code !== undefined && (code === 127 || code === 1)) {
       buffer.addToError('Failed to start command: Command not found\n');
     }
 
