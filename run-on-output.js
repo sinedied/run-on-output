@@ -282,11 +282,15 @@ export async function run(args = process.argv.slice(2)) {
       }
 
       if (config.runCommand) {
-        const actionPromise = executeCommand(config.runCommand, [], {
-          captureOutput: true
-        }).catch((_error) => {
-          // Error already logged in executeCommand
-        });
+        const actionPromise = (async () => {
+          try {
+            await executeCommand(config.runCommand, [], {
+              captureOutput: true
+            });
+          } catch {
+            // Error already logged in executeCommand
+          }
+        })();
         runningActions.push(actionPromise);
       }
     }

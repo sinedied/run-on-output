@@ -1,11 +1,12 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import path from 'node:path';
+import process from 'node:process';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const cliPath = join(__dirname, '..', 'run-on-output.js');
+const __dirname = path.dirname(__filename);
+const cliPath = path.join(__dirname, '..', 'run-on-output.js');
 
 describe('CLI Integration Tests', () => {
   let originalProcessExit;
@@ -303,7 +304,9 @@ describe('CLI Integration Tests', () => {
       );
 
       // Give the process a moment to start
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => {
+        setTimeout(resolve, 100);
+      });
 
       child.kill('SIGINT');
 

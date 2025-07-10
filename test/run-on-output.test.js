@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import process from 'node:process';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   showUsage,
@@ -12,23 +13,8 @@ vi.mock('node:child_process');
 
 describe('run-on-output', () => {
   let mockSpawn;
-  let mockStdout;
-  let mockStderr;
-  let mockProcess;
 
   beforeEach(() => {
-    mockStdout = vi.fn();
-    mockStderr = vi.fn();
-    mockProcess = {
-      stdout: {
-        write: mockStdout
-      },
-      stderr: {
-        write: mockStderr
-      },
-      exit: vi.fn()
-    };
-
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(process, 'exit').mockImplementation((code) => {

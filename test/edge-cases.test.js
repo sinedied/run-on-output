@@ -2,13 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { parseArguments, createPatternMatcher } from '../run-on-output.js';
 
 describe('Edge Cases and Error Scenarios', () => {
-  let mockExit;
   let mockConsoleError;
 
   beforeEach(() => {
-    mockExit = vi.spyOn(process, 'exit').mockImplementation((code) => {
-      throw new Error(`process.exit(${code})`);
-    });
     mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
