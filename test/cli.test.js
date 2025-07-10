@@ -312,15 +312,18 @@ describe('CLI Integration Tests', () => {
     }, 5000);
 
     it('should monitor both stdout and stderr', async () => {
-      // Create a command that outputs to stderr and contains our pattern
+      // Use a shell command that works on both Windows and POSIX
+      // This avoids shell quoting issues with node -e
+      const isWin = process.platform === 'win32';
+      const cmd = isWin
+        ? 'cmd /c "echo stdout message & echo error message 1>&2"'
+        : 'sh -c "echo stdout message; echo error message 1>&2"';
       const result = await runCLI([
         '-s',
         'error',
         '-m',
         'Found in stderr!',
-        'node',
-        '-e',
-        'console.error("error message"); console.log("stdout message");'
+        ...cmd.split(' ')
       ]);
 
       expect(result.code).toBe(0);
