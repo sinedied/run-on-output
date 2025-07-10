@@ -129,7 +129,7 @@ describe('run-on-output', () => {
       const argv = ['-s', 'test', 'echo', 'hello'];
       expect(() => parseArguments(argv)).toThrow('process.exit(1)');
       expect(console.error).toHaveBeenCalledWith(
-        'Error: either --run or --message is required'
+        'Error: either --run, --npm, or --message is required'
       );
     });
 
@@ -148,6 +148,49 @@ describe('run-on-output', () => {
 
       expect(result.message).toBe('Done!');
       expect(result.runCommand).toBe('echo test');
+    });
+
+    it('should handle npm script option', () => {
+      const argv = ['-s', 'ready', '-n', 'test', 'npm', 'start'];
+      const result = parseArguments(argv);
+
+      expect(result.npmScript).toBe('test');
+      expect(result.message).toBeUndefined();
+      expect(result.runCommand).toBeUndefined();
+    });
+
+    it('should handle all action options together', () => {
+      const argv = [
+        '-s',
+        'ready',
+        '-m',
+        'Done!',
+        '-r',
+        'echo test',
+        '-n',
+        'build',
+        'npm',
+        'start'
+      ];
+      const result = parseArguments(argv);
+
+      expect(result.message).toBe('Done!');
+      expect(result.runCommand).toBe('echo test');
+      expect(result.npmScript).toBe('build');
+    });
+
+    it('should handle npm script with short option', () => {
+      const argv = ['-s', 'ready', '-n', 'deploy', 'node', 'server.js'];
+      const result = parseArguments(argv);
+
+      expect(result.npmScript).toBe('deploy');
+    });
+
+    it('should handle npm script with long option', () => {
+      const argv = ['-s', 'ready', '--npm', 'deploy', 'node', 'server.js'];
+      const result = parseArguments(argv);
+
+      expect(result.npmScript).toBe('deploy');
     });
 
     it('should trim whitespace from patterns', () => {

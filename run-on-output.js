@@ -16,12 +16,13 @@ OPTIONS:
   -p, --patterns <patterns>    Comma-separated list of regex patterns to watch for
   -s, --strings <strings>      Comma-separated list of plain strings to watch for
   -r, --run <command>          Command to execute after all patterns are found
+  -n, --npm <script>           npm script to run after all patterns are found
   -m, --message <text>         Message to display after all patterns are found
   -h, --help                   Show this help message
 
 NOTES:
   - Either --patterns or --strings must be specified (but not both)
-  - At least one of --run or --message must be specified
+  - At least one of --run, --npm, or --message must be specified
   - Patterns/strings are matched case-insensitively
   - Output is forwarded in real-time while monitoring
   - Both stdout and stderr are monitored for patterns
@@ -37,7 +38,13 @@ EXAMPLES:
   run-on-output -s "webpack compiled,server ready" -m "Development environment ready" npm run dev
 
   # Multiple actions
-  run-on-output -s "ready" -m "Server is up" -r "open http://localhost:3000" npm start`);
+  run-on-output -s "ready" -m "Server is up" -r "open http://localhost:3000" npm start
+
+  # Run npm script when server is ready
+  run-on-output -s "Server running" -n "test" node server.js
+
+  # Combine all actions
+  run-on-output -s "ready" -m "All ready!" -r "curl localhost:3000" -n "deploy" npm start`);
 }
 
 // eslint-disable-next-line complexity
@@ -51,6 +58,8 @@ export function parseArguments(argv) {
     'strings',
     'r',
     'run',
+    'n',
+    'npm',
     'm',
     'message'
   ]);
@@ -93,6 +102,7 @@ export function parseArguments(argv) {
         patterns: { type: 'string', short: 'p' },
         strings: { type: 'string', short: 's' },
         run: { type: 'string', short: 'r' },
+        npm: { type: 'string', short: 'n' },
         message: { type: 'string', short: 'm' },
         help: { type: 'boolean', short: 'h' }
       },
@@ -129,8 +139,8 @@ export function parseArguments(argv) {
     process.exit(1);
   }
 
-  if (!values.run && !values.message) {
-    console.error('Error: either --run or --message is required');
+  if (!values.run && !values.npm && !values.message) {
+    console.error('Error: either --run, --npm, or --message is required');
     showUsage();
     process.exit(1);
   }
@@ -167,6 +177,7 @@ export function parseArguments(argv) {
   return {
     patterns,
     runCommand: values.run,
+    npmScript: values.npm,
     message: values.message,
     command: positionals[0],
     args: positionals.slice(1)
@@ -285,6 +296,19 @@ export async function run(args = process.argv.slice(2)) {
         const actionPromise = (async () => {
           try {
             await executeCommand(config.runCommand, [], {
+              captureOutput: true
+            });
+          } catch {
+            // Error already logged in executeCommand
+          }
+        })();
+        runningActions.push(actionPromise);
+      }
+
+      if (config.npmScript) {
+        const actionPromise = (async () => {
+          try {
+            await executeCommand(`npm run -s ${config.npmScript}`, [], {
               captureOutput: true
             });
           } catch {

@@ -113,7 +113,7 @@ describe('CLI Integration Tests', () => {
       const result = await runCLI(['-s', 'test', 'echo', 'hello']);
       expect(result.code).toBe(1);
       expect(result.stderr).toContain(
-        'Error: either --run or --message is required'
+        'Error: either --run, --npm, or --message is required'
       );
     });
   });
@@ -228,6 +228,43 @@ describe('CLI Integration Tests', () => {
       expect(result.stdout).toContain('Pattern found!');
       expect(result.stdout).toContain('Command executed!');
     }, 5000);
+
+    it('should execute npm script when patterns are found', async () => {
+      const result = await runCLI([
+        '-s',
+        'hello',
+        '-n',
+        'test:echo',
+        'echo',
+        'hello world'
+      ]);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('hello world');
+      // Should contain npm script output
+      expect(result.stdout).toContain('npm script executed successfully');
+    }, 5000);
+
+    it('should execute all actions when patterns are found', async () => {
+      const result = await runCLI([
+        '-s',
+        'hello',
+        '-m',
+        'Pattern found!',
+        '-r',
+        'echo "Command executed!"',
+        '-n',
+        'test:echo',
+        'echo',
+        'hello world'
+      ]);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('hello world');
+      expect(result.stdout).toContain('Pattern found!');
+      expect(result.stdout).toContain('Command executed!');
+      expect(result.stdout).toContain('npm script executed successfully');
+    }, 10_000);
   });
 
   describe('Error Handling', () => {
