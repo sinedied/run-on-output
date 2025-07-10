@@ -10,7 +10,7 @@
   [![XO code style](https://shields.io/badge/code_style-5ed9c7?logo=xo&labelColor=gray&style=flat-square)](https://github.com/xojs/xo)
   [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-  **⭐ If you like this project, star it on GitHub — it helps a lot!**
+  ⭐ If you like this project, star it on GitHub!
 
   [Features](#features) • [Installation](#installation) • [Usage](#usage) • [Examples](#examples)
 
