@@ -14,7 +14,9 @@
   },
   "scripts": {
     "start": "node run-on-output.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "xo",
     "lint:fix": "xo --fix",
     "release:check": "semantic-release --dry-run"
@@ -58,8 +60,10 @@
     "run-on-output.js"
   ],
   "devDependencies": {
+    "@vitest/coverage-v8": "^2.0.5",
     "semantic-release": "^24.2.6",
     "semantic-release-npm-github": "^5.0.0",
+    "vitest": "^2.0.5",
     "xo": "^1.1.1"
   }
 }
