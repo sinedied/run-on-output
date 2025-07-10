@@ -1,7 +1,7 @@
 {
   "name": "run-on-output",
   "version": "1.0.0",
-  "description": "Execute commands or show message when output patterns are detected",
+  "description": "Execute tasks when CLI output patterns are detected",
   "type": "module",
   "bin": {
     "run-on-output": "./run-on-output.js",
@@ -52,7 +52,7 @@
     }
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "files": [
     "run-on-output.js"
