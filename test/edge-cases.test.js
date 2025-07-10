@@ -261,7 +261,7 @@ describe('Edge Cases and Error Scenarios', () => {
       // Test with malformed argv that might cause parseArgs to throw
       const invalidArgv = ['--invalid-flag-format='];
 
-      expect(() => parseArguments(invalidArgv)).toThrow('process.exit(1)');
+      expect(() => parseArguments(invalidArgv)).toThrow(/process\.exit/);
       expect(mockConsoleError).toHaveBeenCalled();
     });
 

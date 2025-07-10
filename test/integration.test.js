@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const cliPath = path.join(__dirname, '..', 'run-on-output.js');
+const cliPath = path.join(__dirname, '..', 'bin', 'cli.js');
 
 describe('CLI Integration Tests', () => {
   let originalProcessExit;
