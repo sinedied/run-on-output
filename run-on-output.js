@@ -47,10 +47,7 @@ EXAMPLES:
   run-on-output -s "ready" -m "All ready!" -r "curl localhost:3000" -n "deploy" npm start`);
 }
 
-// eslint-disable-next-line complexity
-export function parseArguments(argv) {
-  // Find the first argument that doesn't start with '-' and isn't a value for an option
-  let commandStartIndex = -1;
+function findCommandStartIndex(argv) {
   const optionsWithValues = new Set([
     'p',
     'patterns',
@@ -67,29 +64,27 @@ export function parseArguments(argv) {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (!arg.startsWith('-')) {
-      commandStartIndex = i;
-      break;
+      return i;
     }
 
-    // Skip the next argument if this option takes a value
     if (arg.startsWith('--')) {
-      const optName = arg.slice(2);
-      if (optionsWithValues.has(optName)) {
-        i++; // Skip the value
+      const optionName = arg.slice(2);
+      if (optionsWithValues.has(optionName)) {
+        i++;
       }
     } else if (arg.startsWith('-') && arg.length > 1) {
-      // Handle short options like -s, -p, etc.
-      const optName = arg.slice(1);
-      if (optionsWithValues.has(optName)) {
-        i++; // Skip the value
+      const optionName = arg.slice(1);
+      if (optionsWithValues.has(optionName)) {
+        i++;
       }
     }
   }
 
-  let values;
-  let positionals;
+  return -1;
+}
 
-  // Parse only up to the command start
+function parseRawArguments(argv) {
+  const commandStartIndex = findCommandStartIndex(argv);
   const argsToParse =
     commandStartIndex === -1 ? argv : argv.slice(0, commandStartIndex);
   const commandArgs =
@@ -108,14 +103,15 @@ export function parseArguments(argv) {
       },
       allowPositionals: false
     });
-    values = parsed.values;
-    positionals = commandArgs;
+    return { values: parsed.values, positionals: commandArgs };
   } catch (error) {
     console.error('Error parsing arguments:', error.message);
     showUsage();
     process.exit(1);
   }
+}
 
+function validateArguments(values, positionals) {
   if (values.help) {
     showUsage();
     process.exit(0);
@@ -144,35 +140,41 @@ export function parseArguments(argv) {
     showUsage();
     process.exit(1);
   }
+}
 
+function createPatternsFromValues(values) {
   const useStrings = Boolean(values.strings);
   const rawPatterns = (values.patterns || values.strings)
     .split(',')
-    .map((p) => p.trim());
+    .map((pattern) => pattern.trim());
 
-  let patterns;
   if (useStrings) {
-    patterns = rawPatterns.map((s) => ({
+    return rawPatterns.map((string) => ({
       type: 'string',
-      value: s.toLowerCase()
+      value: string.toLowerCase()
     }));
-  } else {
-    patterns = rawPatterns.map((p) => {
-      try {
-        return { type: 'regex', value: new RegExp(p, 'i') };
-      } catch {
-        // Create a regex that matches the pattern literally
-        const escapedPattern = p.replaceAll(
-          /[.*+?^${}()|[\]\\]/g,
-          String.raw`\$&`
-        );
-        console.warn(
-          `Warning: Invalid regex pattern '${p}', treating as literal string`
-        );
-        return { type: 'regex', value: new RegExp(escapedPattern, 'i') };
-      }
-    });
   }
+
+  return rawPatterns.map((pattern) => {
+    try {
+      return { type: 'regex', value: new RegExp(pattern, 'i') };
+    } catch {
+      const escapedPattern = pattern.replaceAll(
+        /[.*+?^${}()|[\]\\]/g,
+        String.raw`\$&`
+      );
+      console.warn(
+        `Warning: Invalid regex pattern '${pattern}', treating as literal string`
+      );
+      return { type: 'regex', value: new RegExp(escapedPattern, 'i') };
+    }
+  });
+}
+
+export function parseArguments(argv) {
+  const { values, positionals } = parseRawArguments(argv);
+  validateArguments(values, positionals);
+  const patterns = createPatternsFromValues(values);
 
   return {
     patterns,
@@ -187,14 +189,14 @@ export function parseArguments(argv) {
 export async function executeCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const parts = command.split(' ');
-    const cmd = parts[0];
-    const cmdArgs = [...parts.slice(1), ...args];
+    const executable = parts[0];
+    const executableArgs = [...parts.slice(1), ...args];
 
     const stdio = options.captureOutput
       ? ['ignore', 'pipe', 'pipe']
       : ['ignore', 'inherit', 'inherit'];
 
-    const child = spawn(cmd, cmdArgs, {
+    const child = spawn(executable, executableArgs, {
       shell: true,
       stdio
     });
@@ -279,27 +281,116 @@ export function createPatternMatcher(config) {
   return { checkPatterns, foundPatterns, isComplete: () => allPatternsFound };
 }
 
+function createOutputBuffer() {
+  let outputBuffer = '';
+  let errorBuffer = '';
+
+  return {
+    appendOutput(data) {
+      const output = data.toString();
+      outputBuffer += output;
+      return output;
+    },
+    appendError(data) {
+      const output = data.toString();
+      errorBuffer += output;
+      return output;
+    },
+    getOutput: () => outputBuffer,
+    getError: () => errorBuffer,
+    addToOutput(text) {
+      outputBuffer += text;
+    },
+    addToError(text) {
+      errorBuffer += text;
+    }
+  };
+}
+
+async function executeActionsWhenPatternsFound(config, buffer) {
+  if (config.message) {
+    buffer.addToOutput(config.message + '\n');
+  }
+
+  if (config.runCommand) {
+    try {
+      const { stdout, stderr } = await executeCommand(config.runCommand, [], {
+        captureOutput: true
+      });
+      if (stdout) buffer.addToOutput(stdout);
+      if (stderr) buffer.addToError(stderr);
+    } catch (error) {
+      console.error('Failed to execute run command:', error.message);
+    }
+  }
+
+  if (config.npmScript) {
+    try {
+      const { stdout, stderr } = await executeCommand(
+        `npm run -s ${config.npmScript}`,
+        [],
+        {
+          captureOutput: true
+        }
+      );
+      if (stdout) buffer.addToOutput(stdout);
+      if (stderr) buffer.addToError(stderr);
+    } catch (error) {
+      console.error('Failed to execute npm script:', error.message);
+    }
+  }
+}
+
+function setupSignalHandling(childProcess) {
+  const handleSignal = (signal) => {
+    childProcess.kill(signal);
+    setTimeout(() => {
+      const exitCode = signal === 'SIGINT' ? 130 : 143;
+      process.exit(exitCode);
+    }, 500);
+  };
+
+  process.on('SIGINT', () => handleSignal('SIGINT'));
+  process.on('SIGTERM', () => handleSignal('SIGTERM'));
+}
+
+function handleChildProcessError(error, buffer) {
+  buffer.addToError('Failed to start command: ' + error.message + '\n');
+  process.stdout.write(buffer.getOutput());
+  process.stderr.write(buffer.getError());
+  process.exit(1);
+}
+
+function determineExitCode(childExitCode) {
+  if (
+    childExitCode !== 0 &&
+    childExitCode !== undefined &&
+    childExitCode === 127
+  ) {
+    return 1;
+  }
+
+  return 0;
+}
+
+async function finalizeOutput(buffer, exitCode) {
+  process.stdout.write(buffer.getOutput());
+  process.stderr.write(buffer.getError());
+
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  process.exit(exitCode);
+}
+
 export async function run(args = process.argv.slice(2)) {
   const config = parseArguments(args);
   const patternMatcher = createPatternMatcher(config);
-  let outputBuffer = '';
-  let errorBuffer = '';
+  const buffer = createOutputBuffer();
   let allPatternsFound = false;
 
-  function appendOutput(data) {
-    const output = data.toString();
-    outputBuffer += output;
-    return output;
-  }
-
-  function appendError(data) {
-    const output = data.toString();
-    errorBuffer += output;
-    return output;
-  }
-
   async function checkOutput(data) {
-    const output = appendOutput(data);
+    const output = buffer.appendOutput(data);
     const allFound = patternMatcher.checkPatterns(output);
     if (allFound && !allPatternsFound) {
       allPatternsFound = true;
@@ -313,80 +404,26 @@ export async function run(args = process.argv.slice(2)) {
 
   child.stdout.on('data', checkOutput);
   child.stderr.on('data', (data) => {
-    appendError(data);
+    buffer.appendError(data);
     checkOutput(data);
   });
 
   child.on('error', (error) => {
-    errorBuffer += 'Failed to start command: ' + error.message + '\n';
-    process.stdout.write(outputBuffer);
-    process.stderr.write(errorBuffer);
-    process.exit(1);
+    handleChildProcessError(error, buffer);
   });
 
-  child.on('exit', async (code, _signal) => {
-    let exitCode = 0;
+  child.on('exit', async (code) => {
     if (allPatternsFound) {
-      if (config.message) {
-        outputBuffer += config.message + '\n';
-      }
-
-      if (config.runCommand) {
-        try {
-          const { stdout, stderr } = await executeCommand(
-            config.runCommand,
-            [],
-            { captureOutput: true }
-          );
-          if (stdout) outputBuffer += stdout;
-          if (stderr) errorBuffer += stderr;
-        } catch {
-          // Error already logged
-        }
-      }
-
-      if (config.npmScript) {
-        try {
-          const { stdout, stderr } = await executeCommand(
-            `npm run -s ${config.npmScript}`,
-            [],
-            { captureOutput: true }
-          );
-          if (stdout) outputBuffer += stdout;
-          if (stderr) errorBuffer += stderr;
-        } catch {
-          // Error already logged
-        }
-      }
+      await executeActionsWhenPatternsFound(config, buffer);
     }
 
-    if (code !== 0 && code !== undefined && code === 127) {
-      errorBuffer += 'Failed to start command: Command not found\n';
-      exitCode = 1;
+    if (code === 127) {
+      buffer.addToError('Failed to start command: Command not found\n');
     }
 
-    process.stdout.write(outputBuffer);
-    process.stderr.write(errorBuffer);
-
-    await new Promise((resolve) => {
-      setImmediate(resolve);
-    });
-    process.exit(exitCode);
+    const exitCode = determineExitCode(code);
+    await finalizeOutput(buffer, exitCode);
   });
 
-  // Handle process termination
-  process.on('SIGINT', () => {
-    // Forward SIGINT to child and wait for it to exit, then exit self
-    child.kill('SIGINT');
-    setTimeout(() => {
-      process.exit(130); // 128 + SIGINT
-    }, 500);
-  });
-
-  process.on('SIGTERM', () => {
-    child.kill('SIGTERM');
-    setTimeout(() => {
-      process.exit(143); // 128 + SIGTERM
-    }, 500);
-  });
+  setupSignalHandling(child);
 }
