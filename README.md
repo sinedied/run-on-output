@@ -53,6 +53,12 @@ run-on-output -s "webpack compiled,server ready" -m "✅ Development environment
 run-on-output -s "ready" -m "Server is up" -r "open http://localhost:3000" npm start
 ```
 
+> [!TIP]
+> You can use the short alias `roo` instead of `run-on-output` for faster typing:
+> ```bash
+> roo -s "Server started" -m "🚀 Server is ready!" npm start
+> ```
+
 ### Command Line Options
 
 ```
