@@ -4,8 +4,8 @@
   "description": "Execute tasks when CLI output patterns are detected",
   "type": "module",
   "bin": {
-    "run-on-output": "./run-on-output.js",
-    "roo": "./run-on-output.js"
+    "run-on-output": "./bin/cli.js",
+    "roo": "./bin/cli.js"
   },
   "exports": "./run-on-output.js",
   "repository": {
@@ -13,8 +13,9 @@
     "url": "https://github.com/sinedied/run-on-output"
   },
   "scripts": {
-    "start": "node run-on-output.js",
-    "test": "vitest run",
+    "start": "node bin/cli.js",
+    "test": "xo && vitest run",
+    "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "xo",
@@ -57,6 +58,7 @@
     "node": ">=20.0.0"
   },
   "files": [
+    "bin",
     "run-on-output.js"
   ],
   "devDependencies": {

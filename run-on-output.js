@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import process from 'node:process';
 import { spawn } from 'node:child_process';
 import { parseArgs } from 'node:util';
@@ -42,7 +40,7 @@ EXAMPLES:
   run-on-output -s "ready" -m "Server is up" -r "open http://localhost:3000" npm start`);
 }
 
-export function parseArguments(argv = process.argv.slice(2)) {
+export function parseArguments(argv) {
   // Find the first argument that doesn't start with '-' and isn't a value for an option
   let commandStartIndex = -1;
   const optionsWithValues = new Set(['p', 'patterns', 's', 'strings', 'r', 'run', 'm', 'message']);
@@ -233,8 +231,8 @@ export function createPatternMatcher(config) {
   return { checkPatterns, foundPatterns, isComplete: () => allPatternsFound };
 }
 
-async function main() {
-  const config = parseArguments();
+export async function run(args = process.argv.slice(2)) {
+  const config = parseArguments(args);
   const patternMatcher = createPatternMatcher(config);
   let runningActions = [];
 
@@ -300,17 +298,4 @@ async function main() {
   process.on('SIGTERM', () => {
     child.kill('SIGTERM');
   });
-}
-
-// Export for testing, but this file is not meant to be imported in production
-export { main };
-
-// CLI execution - this runs when file is executed directly
-if (process.argv[1] && process.argv[1].endsWith('run-on-output.js')) {
-  try {
-    await main();
-  } catch (error) {
-    console.error('[ERROR] run-on-output failed:', error.message);
-    process.exit(1);
-  }
 }
