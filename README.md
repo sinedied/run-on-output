@@ -3,14 +3,14 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/sinedied/run-on-output/ci.yml?style=flat-square)](https://github.com/sinedied/run-on-output/actions)
 [![npm version](https://img.shields.io/npm/v/run-on-output?style=flat-square)](https://www.npmjs.com/package/run-on-output)
 [![Node version](https://img.shields.io/badge/Node.js->=20-3c873a?style=flat-square)](https://nodejs.org)
+[![XO code style](https://shields.io/badge/code_style-5ed9c7?logo=xo&labelColor=gray&style=flat-square)](https://github.com/xojs/xo)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
 > Execute tasks when CLI output patterns are detected
 
 A lightweight Node.js CLI tool that monitors command output in real-time and triggers actions when specific patterns are found. Perfect for automation workflows, development environments, and CI/CD pipelines.
 
-## Features
-
+**Features**:
 - **Pattern Matching**: Monitor stdout/stderr for regex patterns or plain strings
 - **Real-time Monitoring**: Output is forwarded in real-time while monitoring
 - **Flexible Actions**: Display messages or execute commands when patterns match
