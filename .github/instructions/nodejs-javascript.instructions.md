@@ -1,3 +1,8 @@
+---
+description: "Code generation guidelines for Node.js and JavaScript projects"
+applyTo: '**/*.js
+---
+
 # Code Generation Guidelines
 
 ## Coding standards
