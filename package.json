@@ -1,6 +1,6 @@
 {
   "name": "run-on-output",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Execute tasks when CLI output patterns are detected",
   "type": "module",
   "bin": {

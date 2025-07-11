@@ -1,3 +1,12 @@
+## [1.0.1](https://github.com/sinedied/run-on-output/compare/1.0.0...1.0.1) (2025-07-11)
+
+
+### Bug Fixes
+
+* duplicate output ([63afb3a](https://github.com/sinedied/run-on-output/commit/63afb3a3513e5d48b0af3c3d27fb3de19a3a4c55))
+* ensure actions are executed only once when patterns are found ([8988a41](https://github.com/sinedied/run-on-output/commit/8988a41c02cbaa2c5eae8244b5d74f15bc33d429))
+* output forwarding ([b1e0734](https://github.com/sinedied/run-on-output/commit/b1e073456d85104a231663ef67c1fe06184843ce))
+
 # 1.0.0 (2025-07-10)
 
 
