@@ -45,7 +45,7 @@ npx run-on-output [options] <command> [args...]
 
 **Display a message when server starts:**
 ```bash
-run-on-output -s "Server started" -m "🚀 Server is ready!" npm start
+run-on-output -s "Server started" -m "🚀 Server is ready" npm start
 ```
 
 **Execute a health check when server is listening:**
@@ -66,7 +66,7 @@ run-on-output -s "ready" -m "Server is up" -r "open http://localhost:3000" npm s
 > [!TIP]
 > You can use the short alias `roo` instead of `run-on-output` for faster typing:
 > ```bash
-> roo -s "Server started" -m "🚀 Server is ready!" npm start
+> roo -s "Server started" -m "🚀 Server is ready" npm start
 > ```
 
 ### Command Line Options
@@ -106,7 +106,7 @@ REQUIREMENTS:
 run-on-output -s "webpack compiled,Local:" -r "open http://localhost:3000" npm run dev
 
 # Monitor test runner and show completion message
-run-on-output -s "Tests completed" -m "✅ All tests passed!" npm test
+run-on-output -s "Tests completed" -m "✅ All tests passed" npm test
 ```
 
 **CI/CD Pipeline**
