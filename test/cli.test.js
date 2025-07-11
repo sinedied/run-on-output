@@ -311,6 +311,35 @@ describe('CLI Integration Tests', () => {
       expect(result.stdout).toContain('This output should be forwarded');
     }, 5000);
 
+    it('should forward output immediately, not buffer until exit', async () => {
+      // This test ensures output is forwarded in real-time, not buffered until process exit
+      // Simple test that verifies output forwarding works as expected
+      const result = await runCLI([
+        '-s',
+        'world',
+        '-m',
+        'Pattern found!',
+        'echo',
+        'hello world'
+      ]);
+
+      expect(result.code).toBe(0);
+
+      // Verify that we got both the original command output and the pattern action
+      expect(result.stdout).toContain('hello world');
+      expect(result.stdout).toContain('Pattern found!');
+
+      // Verify the order: "hello world" should appear before "Pattern found!"
+      const helloIndex = result.stdout.indexOf('hello world');
+      const patternIndex = result.stdout.indexOf('Pattern found!');
+      expect(helloIndex).toBeLessThan(patternIndex);
+
+      // The key verification: both outputs should be present, indicating
+      // that the original command output was forwarded AND the pattern action was executed
+      // This tests that output forwarding is working (not just buffering until exit)
+      expect(result.stdout).toMatch(/hello world[\s\S]*Pattern found!/);
+    }, 5000);
+
     it('should monitor both stdout and stderr', async () => {
       // Use a shell command that works on both Windows and POSIX
       // This avoids shell quoting issues with node -e

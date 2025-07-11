@@ -284,6 +284,8 @@ export function createPatternMatcher(config) {
 function createOutputBuffer() {
   let outputBuffer = '';
   let errorBuffer = '';
+  let actionOutputBuffer = '';
+  let actionErrorBuffer = '';
 
   return {
     appendOutput(data) {
@@ -299,11 +301,13 @@ function createOutputBuffer() {
     getOutput: () => outputBuffer,
     getError: () => errorBuffer,
     addToOutput(text) {
-      outputBuffer += text;
+      actionOutputBuffer += text;
     },
     addToError(text) {
-      errorBuffer += text;
-    }
+      actionErrorBuffer += text;
+    },
+    getActionOutput: () => actionOutputBuffer,
+    getActionError: () => actionErrorBuffer
   };
 }
 
@@ -370,8 +374,18 @@ function determineExitCode(childExitCode) {
 }
 
 async function finalizeOutput(buffer, exitCode) {
-  process.stdout.write(buffer.getOutput());
-  process.stderr.write(buffer.getError());
+  // Only write additional output from actions, not the original command output
+  // since that was already forwarded in real-time
+  const additionalOutput = buffer.getActionOutput();
+  const additionalError = buffer.getActionError();
+
+  if (additionalOutput) {
+    process.stdout.write(additionalOutput);
+  }
+
+  if (additionalError) {
+    process.stderr.write(additionalError);
+  }
 
   await new Promise((resolve) => {
     setImmediate(resolve);
@@ -385,23 +399,27 @@ export async function run(args = process.argv.slice(2)) {
   const buffer = createOutputBuffer();
   let allPatternsFound = false;
 
-  async function checkOutput(data) {
-    const output = buffer.appendOutput(data);
-    const allFound = patternMatcher.checkPatterns(output);
-    if (allFound && !allPatternsFound) {
-      allPatternsFound = true;
-    }
-  }
-
   const child = spawn(config.command, config.args, {
     stdio: ['inherit', 'pipe', 'pipe'],
     shell: true
   });
 
-  child.stdout.on('data', checkOutput);
+  child.stdout.on('data', (data) => {
+    const output = buffer.appendOutput(data);
+    process.stdout.write(output);
+    const allFound = patternMatcher.checkPatterns(output);
+    if (allFound && !allPatternsFound) {
+      allPatternsFound = true;
+    }
+  });
+
   child.stderr.on('data', (data) => {
-    buffer.appendError(data);
-    checkOutput(data);
+    const output = buffer.appendError(data);
+    process.stderr.write(output);
+    const allFound = patternMatcher.checkPatterns(output);
+    if (allFound && !allPatternsFound) {
+      allPatternsFound = true;
+    }
   });
 
   child.on('error', (error) => {
