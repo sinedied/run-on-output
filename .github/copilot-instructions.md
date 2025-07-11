@@ -3,6 +3,7 @@
 ## Coding standards
 - Use JavaScript with ES2022 features and Node.js (20+) ESM modules
 - Use Node.js built-in modules and no external dependencies where possible
+- Always use async/await for asynchronous code, and use 'node:util' promisify API to avoid callbacks
 - Keep the code simple and maintainable
 - Use descriptive variable and function names
 - Do not add comments unless absolutely necessary, the code should be self-explanatory
