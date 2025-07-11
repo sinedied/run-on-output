@@ -45,7 +45,7 @@ defTool(
   { prompt: "" },
   async (args) => {
     const { image } = await generateImage(args.prompt, {
-      size: "1768x1024",
+      size: "1536x1024",
       model: imageModel,
     });
 
@@ -69,7 +69,7 @@ def("QUERY", env.vars.question);
 
 $`## Instructions
 Create a prompt for gpt-image-1 to generate a professional social media banner suitable for OpenGraph, Twitter, and other social sharing platforms. Context and inspiration: <QUERY>.
-Target aspect ratio is 2:1 ratio - design for this ratio and make it fit the actual size of 1768x1024 pixels, using black bars.
+Target aspect ratio is 2:1 ratio - design for this ratio and make it fit the actual size of 1536x1024 pixels, using black bars.
 Characteristics of the banner: Modern, professional, visually appealing for social media, bright colors, clean design, readable text elements if any, suitable for software project promotion.
 The banner should work well as a social media preview image and represent the project effectively.
 
