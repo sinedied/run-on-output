@@ -63,6 +63,11 @@ run-on-output -s "webpack compiled,server ready" -m "✅ Development environment
 run-on-output -s "ready" -m "Server is up" -r "open http://localhost:3000" npm start
 ```
 
+**Run npm script when server is ready:**
+```bash
+run-on-output -s "Server running" -n "test" node server.js
+```
+
 > [!TIP]
 > You can use the short alias `roo` instead of `run-on-output` for faster typing:
 > ```bash
@@ -78,12 +83,13 @@ OPTIONS:
   -p, --patterns <patterns>    Comma-separated list of regex patterns to watch for
   -s, --strings <strings>      Comma-separated list of plain strings to watch for
   -r, --run <command>          Command to execute after all patterns are found
+  -n, --npm <script>           npm script to run after all patterns are found
   -m, --message <text>         Message to display after all patterns are found
   -h, --help                   Show this help message
 
 REQUIREMENTS:
   - Either --patterns or --strings must be specified (but not both)
-  - At least one of --run or --message must be specified
+  - At least one of --run, --npm, or --message must be specified
 ```
 
 ### Pattern Types
@@ -132,6 +138,9 @@ run-on-output -p "database.*ready" -m "📁 Database initialized" ./start-db.sh
 # Wait for API server and run endpoint tests
 run-on-output -p "server.*listening.*port" -r "npm run test:api" node api.js
 
-# Monitor microservices startup
-run-on-output -s "auth-service ready,user-service ready" -m "🔐 All services online" ./start-services.sh
+# Monitor microservices startup and run deployment script
+run-on-output -s "auth-service ready,user-service ready" -n "deploy" ./start-services.sh
+
+# Combine message, command and npm script
+run-on-output -s "Database connected" -m "🎉 Ready for testing" -n "test:integration" npm start
 ```
