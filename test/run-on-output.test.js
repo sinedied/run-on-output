@@ -349,10 +349,7 @@ describe('run-on-output', () => {
       };
       mockSpawn.mockReturnValue(mockChild);
 
-      await expect(executeCommand('echo hello', [])).resolves.toEqual({
-        stdout: '',
-        stderr: ''
-      });
+      await expect(executeCommand('echo hello', [])).resolves.toBeUndefined();
       expect(mockSpawn).toHaveBeenCalledWith('echo', ['hello'], {
         shell: true,
         stdio: ['ignore', 'inherit', 'inherit']

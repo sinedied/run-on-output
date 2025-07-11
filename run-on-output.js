@@ -186,65 +186,28 @@ export function parseArguments(argv) {
   };
 }
 
-export async function executeCommand(command, args, options = {}) {
+export async function executeCommand(command, args) {
   return new Promise((resolve, reject) => {
     const parts = command.split(' ');
     const executable = parts[0];
     const executableArgs = [...parts.slice(1), ...args];
 
-    const stdio = options.captureOutput
-      ? ['ignore', 'pipe', 'pipe']
-      : ['ignore', 'inherit', 'inherit'];
-
     const child = spawn(executable, executableArgs, {
       shell: true,
-      stdio
+      stdio: ['ignore', 'inherit', 'inherit']
     });
 
-    let stdout = '';
-    let stderr = '';
-
-    if (options.captureOutput) {
-      child.stdout.on('data', (data) => {
-        const output = data.toString();
-        stdout += output;
-        if (typeof options.onStdout === 'function') {
-          options.onStdout(output);
-        } else {
-          process.stdout.write(output);
-        }
-      });
-
-      child.stderr.on('data', (data) => {
-        const output = data.toString();
-        stderr += output;
-        if (typeof options.onStderr === 'function') {
-          options.onStderr(output);
-        } else {
-          process.stderr.write(output);
-        }
-      });
-    }
-
     child.on('error', (error) => {
-      const errorMessage = `Command failed: ${error.message}`;
-      if (options.captureOutput) {
-        console.error(errorMessage);
-      }
-
+      console.error(`Command failed: ${error.message}`);
       reject(error);
     });
 
     child.on('exit', (code) => {
       if (code === 0) {
-        resolve({ stdout, stderr });
+        resolve();
       } else {
-        const errorMessage = `Command failed: exit code ${code}`;
-        if (options.captureOutput) {
-          console.error(errorMessage);
-        }
-
-        reject(new Error(errorMessage));
+        console.error(`Command failed: exit code ${code}`);
+        reject(new Error(`Command failed: exit code ${code}`));
       }
     });
   });
@@ -284,8 +247,6 @@ export function createPatternMatcher(config) {
 function createOutputBuffer() {
   let outputBuffer = '';
   let errorBuffer = '';
-  let actionOutputBuffer = '';
-  let actionErrorBuffer = '';
 
   return {
     appendOutput(data) {
@@ -299,30 +260,18 @@ function createOutputBuffer() {
       return output;
     },
     getOutput: () => outputBuffer,
-    getError: () => errorBuffer,
-    addToOutput(text) {
-      actionOutputBuffer += text;
-    },
-    addToError(text) {
-      actionErrorBuffer += text;
-    },
-    getActionOutput: () => actionOutputBuffer,
-    getActionError: () => actionErrorBuffer
+    getError: () => errorBuffer
   };
 }
 
-async function executeActionsWhenPatternsFound(config, buffer) {
+async function executeActionsWhenPatternsFound(config) {
   if (config.message) {
-    buffer.addToOutput(config.message + '\n');
+    console.log(config.message);
   }
 
   if (config.runCommand) {
     try {
-      const { stdout, stderr } = await executeCommand(config.runCommand, [], {
-        captureOutput: true
-      });
-      if (stdout) buffer.addToOutput(stdout);
-      if (stderr) buffer.addToError(stderr);
+      await executeCommand(config.runCommand, []);
     } catch (error) {
       console.error('Failed to execute run command:', error.message);
     }
@@ -330,15 +279,7 @@ async function executeActionsWhenPatternsFound(config, buffer) {
 
   if (config.npmScript) {
     try {
-      const { stdout, stderr } = await executeCommand(
-        `npm run -s ${config.npmScript}`,
-        [],
-        {
-          captureOutput: true
-        }
-      );
-      if (stdout) buffer.addToOutput(stdout);
-      if (stderr) buffer.addToError(stderr);
+      await executeCommand(`npm run -s ${config.npmScript}`, []);
     } catch (error) {
       console.error('Failed to execute npm script:', error.message);
     }
@@ -358,10 +299,8 @@ function setupSignalHandling(childProcess) {
   process.on('SIGTERM', () => handleSignal('SIGTERM'));
 }
 
-function handleChildProcessError(error, buffer) {
-  buffer.addToError('Failed to start command: ' + error.message + '\n');
-  process.stdout.write(buffer.getOutput());
-  process.stderr.write(buffer.getError());
+function handleChildProcessError(error) {
+  console.error('Failed to start command:', error.message);
   process.exit(1);
 }
 
@@ -371,26 +310,6 @@ function determineExitCode(childExitCode) {
   }
 
   return 0;
-}
-
-async function finalizeOutput(buffer, exitCode) {
-  // Only write additional output from actions, not the original command output
-  // since that was already forwarded in real-time
-  const additionalOutput = buffer.getActionOutput();
-  const additionalError = buffer.getActionError();
-
-  if (additionalOutput) {
-    process.stdout.write(additionalOutput);
-  }
-
-  if (additionalError) {
-    process.stderr.write(additionalError);
-  }
-
-  await new Promise((resolve) => {
-    setImmediate(resolve);
-  });
-  process.exit(exitCode);
 }
 
 export async function run(args = process.argv.slice(2)) {
@@ -423,23 +342,23 @@ export async function run(args = process.argv.slice(2)) {
   });
 
   child.on('error', (error) => {
-    handleChildProcessError(error, buffer);
+    handleChildProcessError(error);
   });
 
   child.on('exit', async (code) => {
     if (allPatternsFound) {
-      await executeActionsWhenPatternsFound(config, buffer);
+      await executeActionsWhenPatternsFound(config);
     }
 
     // Handle command not found scenarios across different platforms
     // On Unix systems, 127 typically means command not found
     // On Windows, different exit codes may be used
     if (code !== 0 && code !== undefined && (code === 127 || code === 1)) {
-      buffer.addToError('Failed to start command: Command not found\n');
+      console.error('Failed to start command: Command not found');
     }
 
     const exitCode = determineExitCode(code);
-    await finalizeOutput(buffer, exitCode);
+    process.exit(exitCode);
   });
 
   setupSignalHandling(child);

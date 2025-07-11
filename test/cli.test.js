@@ -265,6 +265,53 @@ describe('CLI Integration Tests', () => {
       expect(result.stdout).toContain('Command executed!');
       expect(result.stdout).toContain('npm script executed successfully');
     }, 10_000);
+
+    it('should not duplicate action output when multiple actions are executed', async () => {
+      // This test specifically verifies the fix for the output duplication bug
+      // where action outputs (run commands, npm scripts) were appearing twice
+      const result = await runCLI([
+        '-s',
+        'hello',
+        '-m',
+        'Message output',
+        '-r',
+        'echo "Run command output"',
+        '-n',
+        'test:echo',
+        'echo',
+        'hello world'
+      ]);
+
+      expect(result.code).toBe(0);
+
+      // Count occurrences of each output to ensure no duplication
+      const { stdout } = result;
+
+      // Main command output should appear exactly once
+      const mainOutputMatches = (stdout.match(/hello world/g) || []).length;
+      expect(mainOutputMatches).toBe(1);
+
+      // Message output should appear exactly once
+      const messageMatches = (stdout.match(/Message output/g) || []).length;
+      expect(messageMatches).toBe(1);
+
+      // Run command output should appear exactly once
+      const runCommandMatches = (stdout.match(/Run command output/g) || [])
+        .length;
+      expect(runCommandMatches).toBe(1);
+
+      // NPM script output should appear exactly once
+      const npmScriptMatches = (
+        stdout.match(/npm script executed successfully/g) || []
+      ).length;
+      expect(npmScriptMatches).toBe(1);
+
+      // Verify all outputs are present (but not duplicated)
+      expect(stdout).toContain('hello world');
+      expect(stdout).toContain('Message output');
+      expect(stdout).toContain('Run command output');
+      expect(stdout).toContain('npm script executed successfully');
+    }, 10_000);
   });
 
   describe('Error Handling', () => {
