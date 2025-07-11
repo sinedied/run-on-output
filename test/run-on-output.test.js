@@ -349,10 +349,10 @@ describe('run-on-output', () => {
       };
       mockSpawn.mockReturnValue(mockChild);
 
-      await expect(executeCommand('echo hello', [])).resolves.toBeUndefined();
-      expect(mockSpawn).toHaveBeenCalledWith('echo', ['hello'], {
+      await expect(executeCommand('echo hello')).resolves.toBeUndefined();
+      expect(mockSpawn).toHaveBeenCalledWith('echo hello', [], {
         shell: true,
-        stdio: ['ignore', 'inherit', 'inherit']
+        stdio: 'inherit'
       });
     });
 
@@ -366,7 +366,7 @@ describe('run-on-output', () => {
       };
       mockSpawn.mockReturnValue(mockChild);
 
-      await expect(executeCommand('invalid-command', [])).rejects.toThrow(
+      await expect(executeCommand('invalid-command')).rejects.toThrow(
         'Command failed'
       );
     });
@@ -381,7 +381,7 @@ describe('run-on-output', () => {
       };
       mockSpawn.mockReturnValue(mockChild);
 
-      await expect(executeCommand('false', [])).rejects.toThrow(
+      await expect(executeCommand('false')).rejects.toThrow(
         'Command failed: exit code 1'
       );
     });
@@ -396,15 +396,11 @@ describe('run-on-output', () => {
       };
       mockSpawn.mockReturnValue(mockChild);
 
-      await executeCommand('node app.js', ['--port', '3000']);
-      expect(mockSpawn).toHaveBeenCalledWith(
-        'node',
-        ['app.js', '--port', '3000'],
-        {
-          shell: true,
-          stdio: ['ignore', 'inherit', 'inherit']
-        }
-      );
+      await executeCommand('node app.js --port 3000');
+      expect(mockSpawn).toHaveBeenCalledWith('node app.js --port 3000', [], {
+        shell: true,
+        stdio: 'inherit'
+      });
     });
   });
 
