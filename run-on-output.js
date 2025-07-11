@@ -186,15 +186,11 @@ export function parseArguments(argv) {
   };
 }
 
-export async function executeCommand(command, args) {
+export async function executeCommand(command) {
   return new Promise((resolve, reject) => {
-    const parts = command.split(' ');
-    const executable = parts[0];
-    const executableArgs = [...parts.slice(1), ...args];
-
-    const child = spawn(executable, executableArgs, {
+    const child = spawn(command, [], {
       shell: true,
-      stdio: ['ignore', 'inherit', 'inherit']
+      stdio: 'inherit'
     });
 
     child.on('error', (error) => {
@@ -251,7 +247,7 @@ async function executeActionsWhenPatternsFound(config) {
 
   if (config.runCommand) {
     try {
-      await executeCommand(config.runCommand, []);
+      await executeCommand(config.runCommand);
     } catch (error) {
       console.error('Failed to execute run command:', error.message);
     }
@@ -259,7 +255,7 @@ async function executeActionsWhenPatternsFound(config) {
 
   if (config.npmScript) {
     try {
-      await executeCommand(`npm run -s ${config.npmScript}`, []);
+      await executeCommand(`npm run -s ${config.npmScript}`);
     } catch (error) {
       console.error('Failed to execute npm script:', error.message);
     }
