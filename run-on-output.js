@@ -296,27 +296,44 @@ export async function run(args = process.argv.slice(2)) {
   const config = parseArguments(args);
   const patternMatcher = createPatternMatcher(config);
   let allPatternsFound = false;
+  let actionsPromise;
 
   const child = spawn(config.command, config.args, {
     stdio: ['inherit', 'pipe', 'pipe'],
     shell: true
   });
 
-  child.stdout.on('data', (data) => {
+  child.stdout.on('data', async (data) => {
     const output = data.toString();
     process.stdout.write(output);
     const allFound = patternMatcher.checkPatterns(output);
     if (allFound && !allPatternsFound) {
       allPatternsFound = true;
+      try {
+        if (!actionsPromise) {
+          actionsPromise = executeActionsWhenPatternsFound(config);
+          await actionsPromise;
+        }
+      } catch (error) {
+        console.error('Error executing actions:', error.message);
+      }
     }
   });
 
-  child.stderr.on('data', (data) => {
+  child.stderr.on('data', async (data) => {
     const output = data.toString();
     process.stderr.write(output);
     const allFound = patternMatcher.checkPatterns(output);
     if (allFound && !allPatternsFound) {
       allPatternsFound = true;
+      try {
+        if (!actionsPromise) {
+          actionsPromise = executeActionsWhenPatternsFound(config);
+          await actionsPromise;
+        }
+      } catch (error) {
+        console.error('Error executing actions:', error.message);
+      }
     }
   });
 
@@ -325,8 +342,9 @@ export async function run(args = process.argv.slice(2)) {
   });
 
   child.on('exit', async (code) => {
-    if (allPatternsFound) {
-      await executeActionsWhenPatternsFound(config);
+    // Wait for any running actions to complete
+    if (actionsPromise) {
+      await actionsPromise;
     }
 
     // Handle command not found scenarios across different platforms
