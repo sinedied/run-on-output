@@ -14,6 +14,7 @@
 - Use Vitest for testing
 - Write tests for all new features and bug fixes
 - Ensure tests cover edge cases and error handling
+- NEVER change the original code to make it easier to test, instead, write tests that cover the original code as it is
 
 ## Documentation
 - When adding new features or making significant changes, update the README.md file
