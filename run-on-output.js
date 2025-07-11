@@ -244,26 +244,6 @@ export function createPatternMatcher(config) {
   return { checkPatterns, foundPatterns, isComplete: () => allPatternsFound };
 }
 
-function createOutputBuffer() {
-  let outputBuffer = '';
-  let errorBuffer = '';
-
-  return {
-    appendOutput(data) {
-      const output = data.toString();
-      outputBuffer += output;
-      return output;
-    },
-    appendError(data) {
-      const output = data.toString();
-      errorBuffer += output;
-      return output;
-    },
-    getOutput: () => outputBuffer,
-    getError: () => errorBuffer
-  };
-}
-
 async function executeActionsWhenPatternsFound(config) {
   if (config.message) {
     console.log(config.message);
@@ -315,7 +295,6 @@ function determineExitCode(childExitCode) {
 export async function run(args = process.argv.slice(2)) {
   const config = parseArguments(args);
   const patternMatcher = createPatternMatcher(config);
-  const buffer = createOutputBuffer();
   let allPatternsFound = false;
 
   const child = spawn(config.command, config.args, {
@@ -324,7 +303,7 @@ export async function run(args = process.argv.slice(2)) {
   });
 
   child.stdout.on('data', (data) => {
-    const output = buffer.appendOutput(data);
+    const output = data.toString();
     process.stdout.write(output);
     const allFound = patternMatcher.checkPatterns(output);
     if (allFound && !allPatternsFound) {
@@ -333,7 +312,7 @@ export async function run(args = process.argv.slice(2)) {
   });
 
   child.stderr.on('data', (data) => {
-    const output = buffer.appendError(data);
+    const output = data.toString();
     process.stderr.write(output);
     const allFound = patternMatcher.checkPatterns(output);
     if (allFound && !allPatternsFound) {
