@@ -66,10 +66,10 @@
     "run-on-output.js"
   ],
   "devDependencies": {
-    "@vitest/coverage-v8": "^2.0.5",
+    "@vitest/coverage-v8": "^3.2.4",
     "semantic-release": "^24.2.6",
     "semantic-release-npm-github": "^5.0.0",
-    "vitest": "^2.0.5",
+    "vitest": "^3.2.4",
     "xo": "^1.1.1"
   }
 }
