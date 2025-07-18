@@ -1,3 +1,11 @@
+# [1.1.0](https://github.com/sinedied/run-on-output/compare/1.0.1...1.1.0) (2025-07-18)
+
+
+### Features
+
+* add script to generate social media banners ([f4165c7](https://github.com/sinedied/run-on-output/commit/f4165c7c6c6e207b992b6481a63963d63318020e))
+* implement buffering in pattern matcher to handle large outputs and maintain state across chunks ([190eb36](https://github.com/sinedied/run-on-output/commit/190eb363d1e537bfbb5e5837845a2e94057360c9))
+
 ## [1.0.1](https://github.com/sinedied/run-on-output/compare/1.0.0...1.0.1) (2025-07-11)
 
 
