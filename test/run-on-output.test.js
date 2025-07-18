@@ -691,6 +691,64 @@ describe('run-on-output', () => {
       });
     });
 
+    describe('buffering', () => {
+      it('should match patterns across multiple chunks', () => {
+        const config = {
+          patterns: [{ type: 'string', value: 'server ready' }]
+        };
+        const matcher = createPatternMatcher(config);
+
+        // Split the pattern across two chunks
+        expect(matcher.checkPatterns('ser')).toBe(false);
+        expect(matcher.checkPatterns('ver ready')).toBe(true);
+        expect(matcher.isComplete()).toBe(true);
+      });
+
+      it('should maintain buffer size limit', () => {
+        const config = {
+          patterns: [{ type: 'string', value: 'pattern' }]
+        };
+        const matcher = createPatternMatcher(config);
+
+        // Add more than 16KB of data
+        const largeChunk = 'x'.repeat(8192); // 8KB
+        matcher.checkPatterns(largeChunk);
+        matcher.checkPatterns(largeChunk);
+        matcher.checkPatterns(largeChunk); // Now we have 24KB total
+
+        // The pattern should still be found if it's within the buffer window
+        expect(matcher.checkPatterns('pattern')).toBe(true);
+      });
+
+      it('should handle regex patterns across chunks', () => {
+        const config = {
+          patterns: [{ type: 'regex', value: /listening on port \d+/i }]
+        };
+        const matcher = createPatternMatcher(config);
+
+        expect(matcher.checkPatterns('Server list')).toBe(false);
+        expect(matcher.checkPatterns('ening on port')).toBe(false);
+        expect(matcher.checkPatterns(' 3000')).toBe(true);
+        expect(matcher.isComplete()).toBe(true);
+      });
+
+      it('should handle buffer overflow without affecting found patterns', () => {
+        const config = {
+          patterns: [{ type: 'string', value: 'important-pattern' }]
+        };
+        const matcher = createPatternMatcher(config);
+
+        // Add the pattern early and ensure it's found
+        expect(matcher.checkPatterns('important-pattern found')).toBe(true);
+        expect(matcher.isComplete()).toBe(true);
+
+        // Even if we overflow the buffer, the completion state should remain
+        const largeChunk = 'x'.repeat(17_000); // 17KB
+        expect(matcher.checkPatterns(largeChunk)).toBe(false); // No new patterns to find
+        expect(matcher.isComplete()).toBe(true); // Still complete
+      });
+    });
+
     describe('performance and optimization', () => {
       it('should handle many patterns efficiently', () => {
         const patterns = Array.from({ length: 100 }, (_, i) => ({

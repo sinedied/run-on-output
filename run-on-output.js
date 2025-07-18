@@ -212,15 +212,30 @@ export async function executeCommand(command) {
 export function createPatternMatcher(config) {
   const foundPatterns = new Set();
   let allPatternsFound = false;
+  const bufferSize = 16 * 1024; // 16KB buffer
+  let buffer = '';
 
   function checkPatterns(output) {
     if (allPatternsFound) return false;
 
+    // Handle null/undefined output
+    if (output === null || output === undefined) {
+      throw new TypeError('Output cannot be null or undefined');
+    }
+
+    // Add new output to buffer
+    buffer += output;
+
+    // Keep buffer within size limit by removing from the beginning
+    if (buffer.length > bufferSize) {
+      buffer = buffer.slice(-bufferSize);
+    }
+
     for (const pattern of config.patterns) {
       const isMatch =
         pattern.type === 'string'
-          ? output.toLowerCase().includes(pattern.value)
-          : pattern.value.test(output);
+          ? buffer.toLowerCase().includes(pattern.value)
+          : pattern.value.test(buffer);
 
       if (isMatch) {
         const patternKey =
